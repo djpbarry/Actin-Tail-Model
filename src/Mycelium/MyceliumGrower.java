@@ -1,9 +1,9 @@
 package Mycelium;
 
 import AnaMorf.BatchAnalyser;
-import EMSeg.FractalEstimator;
 import EMSeg.ProgressDialog;
-import EMSeg.Utils;
+import IAClasses.FractalEstimator;
+import IAClasses.Utils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
@@ -362,7 +362,6 @@ public class MyceliumGrower {
 //        sd = Math.sqrt(variance);
 //        System.out.print(mean + "\t" + sd + "\n");
 //    }
-
     void updateNutrientField(ByteProcessor ip, int i) {
         FloatBlitter nutFieldBlit = new FloatBlitter(nutrientField);
         nutFieldBlit.copyBits(ip, 0, 0, FloatBlitter.MIN);
