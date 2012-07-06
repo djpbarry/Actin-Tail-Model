@@ -1,9 +1,9 @@
 package Mycelium;
 
 import AnaMorf.BatchAnalyser;
-import EMSeg.FractalEstimator;
+import IAClasses.FractalEstimator;
 import EMSeg.ProgressDialog;
-import EMSeg.Utils;
+import IAClasses.Utils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
