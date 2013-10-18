@@ -1,46 +1,61 @@
 package Mycelium;
 
-import ij.IJ;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class Hypha {
 
-    private double x0, y0, x, y, angle, branch = -90;
-    private int length;
+    private double x, y, hgu;
+    int length;
+    ArrayList xPix = new ArrayList();
+    ArrayList yPix = new ArrayList();
     ImageProcessor plot;
+    Random R = new Random();
+    boolean branchX = true;
+    private double angle, branch = -90, branchOffset;
 
-    public Hypha(double x1, double y1, double xc, double yc, double a0, ImageProcessor ip) {
-        x0 = x1;
-        y0 = y1;
-        x = xc;
-        y = yc;
-        angle = a0;
-        plot = ip;
-        length = 0;
+    public Hypha(double xc, double yc, double a0, ImageProcessor ip, double hgu) {
+        this.x = xc;
+        this.y = yc;
+        this.angle = a0;
+        this.plot = ip;
+        this.length = 0;
+        this.hgu = hgu;
+        branchOffset = R.nextGaussian() * hgu * 0.2;
+        if (R.nextBoolean()) {
+            branchOffset *= -1;
+        }
     }
 
-    public void grow(double biomass) {
-        double oldx = x;
-        double oldy = y;
-
-        double m = (y - y0) / (x0 - x);
-        double t = Math.toDegrees(Math.atan(m));
-        if (x < x0) {
-            t += 180;
+    public void grow(FloatProcessor densityField, FloatProcessor nutrientField,
+            double gradSens, double noise) {
+        xPix.add(new Double(x));
+        yPix.add(new Double(y));
+        double nfParams[] = getVector(nutrientField, x, y);
+        double dfParams[] = getVector(densityField, x, y);
+        if (nfParams == null) {
+            nfParams = new double[2];
+            nfParams[0] = 0.0;
+            nfParams[1] = angle;
         }
-
-        if (x == x0 && y <= y0) {
-            t = 90;
+        if (dfParams == null) {
+            dfParams = new double[2];
+            dfParams[0] = 0.0;
+            dfParams[1] = angle;
         }
-        if (x == x0 && y >= y0) {
-            t = 270;
-        }
+        angle += ((dfParams[0] * (dfParams[1] - angle) + nfParams[0]
+                * (nfParams[1] - angle)) / gradSens) + noise * R.nextGaussian();
 
-        IJ.write("" + m + " " + t);
+        double xVec = Math.cos(Math.toRadians(angle));
+        double yVec = Math.sin(Math.toRadians(angle));
 
-        x += Math.cos(Math.toRadians(angle));
-        y -= Math.sin(Math.toRadians(angle));
-        plot.drawLine((int) oldx, (int) oldy, (int) x, (int) y);
+        x += xVec;
+        y += yVec;
+        plot.drawLine((int) Math.round(((Double) xPix.get(length)).doubleValue()),
+                (int) Math.round(((Double) yPix.get(length)).doubleValue()),
+                (int) Math.round(x), (int) Math.round(y));
         length++;
     }
 
@@ -48,16 +63,79 @@ public class Hypha {
         return length;
     }
 
+    public void resetLength() {
+        Double tempX = ((Double) xPix.get(length - 1));
+        Double tempY = ((Double) yPix.get(length - 1));
+        xPix.clear();
+        yPix.clear();
+        xPix.add(tempX);
+        yPix.add(tempY);
+        length = 1;
+    }
+
+    public int getBranchx(double d) {
+        return (int) Math.round((Double) xPix.get(length - (int) Math.round(d) - 1));
+    }
+
+    public int getBranchy(double d) {
+        return (int) Math.round((Double) yPix.get(length - (int) Math.round(d) - 1));
+    }
+
     public double getBranchAngle() {
         branch += -2 * branch;
         return (branch + angle);
     }
 
-    public int getBranchx(int d) {
-        return (int) Math.round(x -= d * Math.cos(Math.toRadians(angle)));
+    public int getX() {
+        return (int) x;
     }
 
-    public int getBranchy(int d) {
-        return (int) Math.round(y += d * Math.sin(Math.toRadians(angle)));
+    public int getY() {
+        return (int) y;
+    }
+
+    public double getBranchOffset() {
+        return branchOffset;
+    }
+
+    public void resetBranchOffset() {
+        branchOffset = R.nextGaussian() * hgu * 0.2;
+        if (R.nextBoolean()) {
+            branchOffset *= -1;
+        }
+    }
+
+    double[] getVector(FloatProcessor field, double x, double y) {
+        double xGrad = field.getInterpolatedValue(x + 1.0, y - 1.0)
+                + 2.0 * field.getInterpolatedValue(x + 1.0, y)
+                + field.getInterpolatedValue(x + 1.0, y + 1.0)
+                - field.getInterpolatedValue(x - 1.0, y - 1.0)
+                - 2.0 * field.getInterpolatedValue(x - 1.0, y)
+                - field.getInterpolatedValue(x - 1.0, y + 1.0);
+        double yGrad = field.getInterpolatedValue(x - 1.0, y + 1.0)
+                + 2.0 * field.getInterpolatedValue(x, y + 1.0)
+                + field.getInterpolatedValue(x + 1.0, y + 1.0)
+                - field.getInterpolatedValue(x - 1.0, y - 1.0)
+                - 2.0 * field.getInterpolatedValue(x, y - 1.0)
+                - field.getInterpolatedValue(x + 1.0, y - 1.0);
+        double gradMag = Math.sqrt(xGrad * xGrad + yGrad * yGrad);
+
+        double t;
+        if (gradMag > 0.0) {
+            t = Math.toDegrees(Math.atan(yGrad / xGrad));
+        } else {
+            t = Double.NaN;
+        }
+        if (xGrad > 0.0 && yGrad < 0.0) {
+            t += 360.0;
+        } else if (xGrad < 0.0) {
+            t += 180.0;
+        }
+        double params[] = {gradMag, t};
+        if (Double.isNaN(t)) {
+            params = null;
+        }
+
+        return params;
     }
 }

@@ -1,25 +1,24 @@
 package Mycelium;
 
 import AnaMorf.BatchAnalyser;
-import EMSeg.ProgressDialog;
 import IAClasses.FractalEstimator;
+import IAClasses.ProgressDialog;
 import IAClasses.Utils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import ij.plugin.filter.GaussianBlur;
-import ij.process.*;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Rectangle;
-import java.awt.Toolkit;
+import ij.process.ByteProcessor;
+import ij.process.FloatBlitter;
+import ij.process.FloatProcessor;
+import ij.process.ImageProcessor;
+import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Random;
 
 public class MyceliumGrower {
@@ -41,41 +40,41 @@ public class MyceliumGrower {
         float steps = 40000.0f;
 //        Random rand = new Random();
 //        double maxinc = 5.0;
-        grower.lacSurf = new ImageProcessor[10];
-        grower.dsSurf = new ImageProcessor[10];
-        grower.areaSurf = new ImageProcessor[10];
-        for (int i = 0; i < 10; i++) {
-            grower.lacSurf[i] = (new ImagePlus("C:\\Users\\Dave\\lac" + (i + 1) + ".tif")).getProcessor();
-            grower.dsSurf[i] = (new ImagePlus("C:\\Users\\Dave\\ds" + (i + 1) + ".tif")).getProcessor();
-            grower.areaSurf[i] = (new ImagePlus("C:\\Users\\Dave\\area" + (i + 1) + ".tif")).getProcessor();
-            grower.areaSurf[i].log();
-            ImageStatistics lacstats = grower.lacSurf[i].getStatistics();
-            ImageStatistics fracstats = grower.dsSurf[i].getStatistics();
-            ImageStatistics areastats = grower.areaSurf[i].getStatistics();
-            if (lacstats.max > grower.lac_max) {
-                grower.lac_max = lacstats.max;
-            }
-            if (fracstats.max > grower.ds_max) {
-                grower.ds_max = fracstats.max;
-            }
-            if (areastats.max > grower.area_max) {
-                grower.area_max = areastats.max;
-            }
-        }
-        grower.areaCurve = new double[grower.areaSurf[0].getHeight()];
-        Arrays.fill(grower.areaCurve, 0.0);
-        for (int i = 0; i < 10; i++) {
-            grower.lacSurf[i].multiply(1.0 / grower.lac_max);
-            grower.dsSurf[i].multiply(1.0 / grower.ds_max);
-            grower.areaSurf[i].multiply(1.0 / grower.area_max);
-            for (int y = 0; y < grower.areaSurf[i].getHeight(); y++) {
-                double sum = 0.0;
-                for (int x = 0; x < grower.areaSurf[i].getWidth(); x++) {
-                    sum += grower.areaSurf[i].getPixelValue(x, y);
-                }
-                grower.areaCurve[y] += sum / (grower.areaSurf[i].getWidth() * 10.0);
-            }
-        }
+//        grower.lacSurf = new ImageProcessor[10];
+//        grower.dsSurf = new ImageProcessor[10];
+//        grower.areaSurf = new ImageProcessor[10];
+//        for (int i = 0; i < 10; i++) {
+//            grower.lacSurf[i] = (new ImagePlus("C:\\Users\\Dave\\lac" + (i + 1) + ".tif")).getProcessor();
+//            grower.dsSurf[i] = (new ImagePlus("C:\\Users\\Dave\\ds" + (i + 1) + ".tif")).getProcessor();
+//            grower.areaSurf[i] = (new ImagePlus("C:\\Users\\Dave\\area" + (i + 1) + ".tif")).getProcessor();
+//            grower.areaSurf[i].log();
+//            ImageStatistics lacstats = grower.lacSurf[i].getStatistics();
+//            ImageStatistics fracstats = grower.dsSurf[i].getStatistics();
+//            ImageStatistics areastats = grower.areaSurf[i].getStatistics();
+//            if (lacstats.max > grower.lac_max) {
+//                grower.lac_max = lacstats.max;
+//            }
+//            if (fracstats.max > grower.ds_max) {
+//                grower.ds_max = fracstats.max;
+//            }
+//            if (areastats.max > grower.area_max) {
+//                grower.area_max = areastats.max;
+//            }
+//        }
+//        grower.areaCurve = new double[grower.areaSurf[0].getHeight()];
+//        Arrays.fill(grower.areaCurve, 0.0);
+//        for (int i = 0; i < 10; i++) {
+//            grower.lacSurf[i].multiply(1.0 / grower.lac_max);
+//            grower.dsSurf[i].multiply(1.0 / grower.ds_max);
+//            grower.areaSurf[i].multiply(1.0 / grower.area_max);
+//            for (int y = 0; y < grower.areaSurf[i].getHeight(); y++) {
+//                double sum = 0.0;
+//                for (int x = 0; x < grower.areaSurf[i].getWidth(); x++) {
+//                    sum += grower.areaSurf[i].getPixelValue(x, y);
+//                }
+//                grower.areaCurve[y] += sum / (grower.areaSurf[i].getWidth() * 10.0);
+//            }
+//        }
 //        for (double h = 10+ maxinc * rand.nextDouble(); h < 100.0; h += maxinc * rand.nextDouble()) {
         for (int h = 50; h <= 50; h += 5) {
             grower.dataPoints = new ArrayList();
@@ -147,7 +146,7 @@ public class MyceliumGrower {
          * hyphae.add(new Hypha(x0, y0, angle2, ip, hgu)); h0++;
          */
 
-        imageFolder = new File("d:\\Mycelium\\" + decFormat.format(hgu)
+        imageFolder = new File("c:\\Mycelium\\" + decFormat.format(hgu)
                 + "_" + numFormat.format(maxLength));
         if (!imageFolder.exists()) {
             if (!imageFolder.mkdir()) {
@@ -194,7 +193,7 @@ public class MyceliumGrower {
             h1 = h0;
             for (j = 0; j < h1; j++) {
                 Hypha current = (Hypha) hyphae.get(j);
-                current.grow();
+                current.grow(densityField, nutrientField, gradSens, noise);
                 totalLength++;
                 x = current.getX();
                 y = current.getY();
@@ -244,8 +243,8 @@ public class MyceliumGrower {
             ba.searchImage(ip.duplicate().crop(), false, null, false);
             double params[] = ba.getParams();
             params[2] = (5.0 - Math.abs(params[2])) / 2.0;
-            hguestimate[i] = hguEstimate(params[1], params[3], params[2]);
-//            hguestimate[i] = 0.0;
+//            hguestimate[i] = hguEstimate(params[1], params[3], params[2]);
+            hguestimate[i] = 0.0;
             if (dims != null && params != null) {
 //                outputStream.println(i + "," + hyphalCount + "," + totalLength + "," + decFormat.format(params[4]) + "," + decFormat.format(params[0])
 //                        + "," + decFormat.format(params[1]) + "," + decFormat.format(dims[0]) + "," + decFormat.format(dims[1])
@@ -257,17 +256,18 @@ public class MyceliumGrower {
                         + "\t" + decFormat.format(params[2]) + "\t" + decFormat.format(params[3])
                         + "\t" + decFormat.format(params[4]) + "\t" + decFormat.format(dims[0])
                         + "\t" + decFormat.format(dims[1]) + "\t" + decFormat.format(hguestimate[i]));
-            }
-//            } else {
-//                output = i + "," + hyphalCount + ",N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A";
 //            }
+            } else {
+//                output = i + "," + hyphalCount + ",N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A";
+                outputStream.println(i + "," + hyphalCount + ",N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A");
+            }
 //            outputStream.println(output);
-//            ImageProcessor outIP = ip.duplicate();
-            //outIP.setFont(new Font("Arial", Font.BOLD, 30));
-            //outIP.drawString(output, 10, 32);
-//            IJ.saveAs(new ImagePlus("", outIP), "PNG", imageFolder + "\\Mycelium" + numFormat.format(i));
-            //IJ.saveAs(new ImagePlus("", densityField), "TIF", imageFolder + "\\DensityField" + numFormat.format(i));
-            //IJ.saveAs(new ImagePlus("", nutrientField), "TIF", imageFolder + "\\NutrientField" + numFormat.format(i));
+            ImageProcessor outIP = ip.duplicate();
+            outIP.setFont(new Font("Arial", Font.BOLD, 30));
+//            outIP.drawString(output, 10, 32);
+            IJ.saveAs(new ImagePlus("", outIP), "PNG", imageFolder + "\\Mycelium" + numFormat.format(i));
+//            IJ.saveAs(new ImagePlus("", densityField), "TIF", imageFolder + "\\DensityField" + numFormat.format(i));
+//            IJ.saveAs(new ImagePlus("", nutrientField), "TIF", imageFolder + "\\NutrientField" + numFormat.format(i));
 
             if (dataPoints.size() > i) {
                 double data[][] = (double[][]) dataPoints.get(i);
@@ -421,140 +421,6 @@ public class MyceliumGrower {
             return 10.0 + 5.0 * hguindex;
         } else {
             return Double.NaN;
-        }
-    }
-
-    public class Hypha {
-
-        private double x, y, hgu;
-        int length;
-        ArrayList xPix = new ArrayList();
-        ArrayList yPix = new ArrayList();
-        ImageProcessor plot;
-        Random R = new Random();
-        boolean branchX = true;
-        private double angle, branch = -90, branchOffset;
-
-        public Hypha(double xc, double yc, double a0, ImageProcessor ip, double hgu) {
-            this.x = xc;
-            this.y = yc;
-            this.angle = a0;
-            this.plot = ip;
-            this.length = 0;
-            this.hgu = hgu;
-            branchOffset = R.nextGaussian() * hgu * 0.2;
-            if (R.nextBoolean()) {
-                branchOffset *= -1;
-            }
-        }
-
-        public void grow() {
-            xPix.add(new Double(x));
-            yPix.add(new Double(y));
-            double nfParams[] = getVector(nutrientField, x, y);
-            double dfParams[] = getVector(densityField, x, y);
-            if (nfParams == null) {
-                nfParams = new double[2];
-                nfParams[0] = 0.0;
-                nfParams[1] = angle;
-            }
-            if (dfParams == null) {
-                dfParams = new double[2];
-                dfParams[0] = 0.0;
-                dfParams[1] = angle;
-            }
-            angle += ((dfParams[0] * (dfParams[1] - angle) + nfParams[0]
-                    * (nfParams[1] - angle)) / gradSens) + noise * R.nextGaussian();
-
-            double xVec = Math.cos(Math.toRadians(angle));
-            double yVec = Math.sin(Math.toRadians(angle));
-
-            x += xVec;
-            y += yVec;
-            plot.drawLine((int) Math.round(((Double) xPix.get(length)).doubleValue()),
-                    (int) Math.round(((Double) yPix.get(length)).doubleValue()),
-                    (int) Math.round(x), (int) Math.round(y));
-            length++;
-        }
-
-        public int getLength() {
-            return length;
-        }
-
-        public void resetLength() {
-            Double tempX = ((Double) xPix.get(length - 1));
-            Double tempY = ((Double) yPix.get(length - 1));
-            xPix.clear();
-            yPix.clear();
-            xPix.add(tempX);
-            yPix.add(tempY);
-            length = 1;
-        }
-
-        public int getBranchx(double d) {
-            return (int) Math.round((Double) xPix.get(length - (int) Math.round(d) - 1));
-        }
-
-        public int getBranchy(double d) {
-            return (int) Math.round((Double) yPix.get(length - (int) Math.round(d) - 1));
-        }
-
-        public double getBranchAngle() {
-            branch += -2 * branch;
-            return (branch + angle);
-        }
-
-        public int getX() {
-            return (int) x;
-        }
-
-        public int getY() {
-            return (int) y;
-        }
-
-        public double getBranchOffset() {
-            return branchOffset;
-        }
-
-        public void resetBranchOffset() {
-            branchOffset = R.nextGaussian() * hgu * 0.2;
-            if (R.nextBoolean()) {
-                branchOffset *= -1;
-            }
-        }
-
-        double[] getVector(FloatProcessor field, double x, double y) {
-            double xGrad = field.getInterpolatedValue(x + 1.0, y - 1.0)
-                    + 2.0 * field.getInterpolatedValue(x + 1.0, y)
-                    + field.getInterpolatedValue(x + 1.0, y + 1.0)
-                    - field.getInterpolatedValue(x - 1.0, y - 1.0)
-                    - 2.0 * field.getInterpolatedValue(x - 1.0, y)
-                    - field.getInterpolatedValue(x - 1.0, y + 1.0);
-            double yGrad = field.getInterpolatedValue(x - 1.0, y + 1.0)
-                    + 2.0 * field.getInterpolatedValue(x, y + 1.0)
-                    + field.getInterpolatedValue(x + 1.0, y + 1.0)
-                    - field.getInterpolatedValue(x - 1.0, y - 1.0)
-                    - 2.0 * field.getInterpolatedValue(x, y - 1.0)
-                    - field.getInterpolatedValue(x + 1.0, y - 1.0);
-            double gradMag = Math.sqrt(xGrad * xGrad + yGrad * yGrad);
-
-            double t;
-            if (gradMag > 0.0) {
-                t = Math.toDegrees(Math.atan(yGrad / xGrad));
-            } else {
-                t = Double.NaN;
-            }
-            if (xGrad > 0.0 && yGrad < 0.0) {
-                t += 360.0;
-            } else if (xGrad < 0.0) {
-                t += 180.0;
-            }
-            double params[] = {gradMag, t};
-            if (Double.isNaN(t)) {
-                params = null;
-            }
-
-            return params;
         }
     }
 }
