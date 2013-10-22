@@ -194,9 +194,9 @@ public class MyceliumGrower {
             dialog.addNumericField("Begin at:", firstH, 0, 5, "");
             dialog.addNumericField("End at:", lastH, 0, 5, "");
             dialog.addNumericField("Step size:", intervalH, 0, 5, "");
-            dialog.addNumericField("Step size:", maxLength, 0, 5, "");
-            dialog.addNumericField("Step size:", width, 0, 5, "");
-            dialog.addNumericField("Step size:", height, 0, 5, "");
+            dialog.addNumericField("Maximum length:", maxLength, 0, 5, "Pixels");
+            dialog.addNumericField("Image width:", width, 0, 5, "");
+            dialog.addNumericField("Image height:", height, 0, 5, "");
             dialog.addCheckbox("Show all images?", showAllImages);
             if (IJ.getInstance() != null) {
                 dialog.setLocation((IJ.getInstance()).getPreferredLocation());
