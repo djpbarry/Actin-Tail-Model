@@ -1,5 +1,6 @@
 package Mycelium;
 
+import AnaMorf.Utilities;
 import IAClasses.ProgressDialog;
 import UtilClasses.GenUtils;
 import ij.IJ;
@@ -37,7 +38,8 @@ public class MyceliumGrower {
     private Random R = new Random();
     private static int firstH = 50, lastH = 50, intervalH = 5, maxLength = 40000,
             width = 1200, height = 1200;
-    private final String TITLE = "";
+    private final String TITLE = "",
+            resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
     private static boolean showAllImages = false;
 
     public static void main(String args[]) {
@@ -87,14 +89,8 @@ public class MyceliumGrower {
 
         hyphae.add(new Hypha(x0, y0, angle, ip, hgu));
         h0++;
-
-        imageFolder = new File("c:\\Mycelium\\" + decFormat.format(hgu)
-                + "_" + maxLength);
-        if (!imageFolder.exists()) {
-            if (!imageFolder.mkdir()) {
-                IJ.error("Failed to create image directory.");
-            }
-        }
+        imageFolder = GenUtils.createDirectory(((Utilities.getFolder(imageFolder, "Choose_Location_for_Output")).getAbsolutePath()
+                + "\\Mycelium\\" + decFormat.format(hgu) + "_" + maxLength));
         File results = null;
         PrintWriter outputStream = null;
         try {
@@ -107,7 +103,7 @@ public class MyceliumGrower {
         } catch (FileNotFoundException e) {
             IJ.error("Could not write to results file.");
         }
-        outputStream.println("Iterations,Number of Tips,Total Length,Perimeter Length,Circularity,Area,Dbm,Dbs,Ds,Dss,Lacunarity,Ds R^2,Dss R^2,Dst,Dst R^2,HGU Estimate");
+        outputStream.println(resultsHeadings);
         ProgressDialog dialog = new ProgressDialog(null, "HGU: " + hgu + " " + thisIter + " - Growing...", false, false);
         dialog.setVisible(true);
         nutrientField = new FloatProcessor(w, h);
