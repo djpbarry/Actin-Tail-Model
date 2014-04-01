@@ -1,6 +1,6 @@
 package Mycelium;
 
-import AnaMorf.Utilities;
+import UtilClasses.Utilities;
 import IAClasses.ProgressDialog;
 import UtilClasses.GenUtils;
 import ij.IJ;
@@ -104,7 +104,7 @@ public class MyceliumGrower {
             IJ.error("Could not write to results file.");
         }
         outputStream.println(resultsHeadings);
-        ProgressDialog dialog = new ProgressDialog(null, "HGU: " + hgu + " " + thisIter + " - Growing...", false, false);
+        ProgressDialog dialog = new ProgressDialog(null, "HGU: " + hgu + " " + thisIter + " - Growing...", false, false, TITLE);
         dialog.setVisible(true);
         nutrientField = new FloatProcessor(w, h);
         nutrientField.setValue(255.0);
