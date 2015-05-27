@@ -14,7 +14,7 @@ public class Hypha {
     ImageProcessor plot;
     Random R = new Random();
     boolean branchX = true;
-    private double angle, branch = -90, branchOffset;
+    private double angle, branch = -70, branchOffset;
 
     public Hypha(double xc, double yc, double a0, ImageProcessor ip, double hgu) {
         this.x = xc;
@@ -29,24 +29,25 @@ public class Hypha {
         }
     }
 
-    public void grow(FloatProcessor densityField, FloatProcessor nutrientField,
-            double gradSens, double noise) {
+    public void grow(FloatProcessor densityField, FloatProcessor nutrientField, double dfGradSens, double noise, double nfGradSens) {
         xPix.add(new Double(x));
         yPix.add(new Double(y));
         double nfParams[] = getVector(nutrientField, x, y);
-        double dfParams[] = getVector(densityField, x, y);
+//        double dfParams[] = getVector(densityField, x, y);
         if (nfParams == null) {
             nfParams = new double[2];
             nfParams[0] = 0.0;
             nfParams[1] = angle;
         }
-        if (dfParams == null) {
-            dfParams = new double[2];
-            dfParams[0] = 0.0;
-            dfParams[1] = angle;
-        }
-        angle += ((dfParams[0] * (dfParams[1] - angle) + nfParams[0]
-                * (nfParams[1] - angle)) / gradSens) + noise * R.nextGaussian();
+//        if (dfParams == null) {
+//            dfParams = new double[2];
+//            dfParams[0] = 0.0;
+//            dfParams[1] = angle;
+//        }
+//        angle += (dfParams[0] * (dfParams[1] - angle) / dfGradSens)
+//                + (nfParams[0] * (nfParams[1] - angle) / nfGradSens)
+//                + noise * R.nextGaussian();
+        angle += noise * R.nextGaussian();
 
         double xVec = Math.cos(Math.toRadians(angle));
         double yVec = Math.sin(Math.toRadians(angle));
