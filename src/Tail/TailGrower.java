@@ -66,7 +66,7 @@ public class TailGrower {
                 ByteProcessor bp = new ByteProcessor(width, height);
                 bp.setColor(Color.white);
                 bp.fill();
-                growMycelium(bp, i, h, maxLength);
+                grow(bp, i, h, maxLength);
             }
         }
     }
@@ -74,12 +74,11 @@ public class TailGrower {
     public TailGrower() {
     }
 
-    public void growMycelium(ByteProcessor ip, int thisIter, double hgu, int maxLength) {
+    public void grow(ByteProcessor ip, int thisIter, double hgu, int maxLength) {
         int w = ip.getWidth(), h = ip.getHeight(), i, j, h0 = 0, h1, x0 = 2,
                 y0 = h / 2, x, y, xlow = w / 2 - 1, xhigh = w / 2 + 1,
                 ylow = h / 2 - 1, yhigh = h / 2 + 1;
         double apex;
-        GaussianBlur blurrer = new GaussianBlur();
         DecimalFormat numFormat = new DecimalFormat("000");
         DecimalFormat decFormat = new DecimalFormat("0.000");
         int totalLength = 0;
