@@ -12,7 +12,6 @@ import ij.process.ByteProcessor;
 import ij.process.FloatBlitter;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import ij.process.TypeConverter;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Rectangle;
@@ -28,20 +27,20 @@ public class MyceliumGrower {
 
     public double radius = 25.0;
     private FloatProcessor densityField, nutrientField;
-    public double dfGradSens = 5000.0, nfGradSens = 500.0, noise = 1.5, growThresh = 150.0;
+    public double gradSens = 5000.0, noise = 10.0, growThresh = 150.0;
     public ArrayList dataPoints;
     private static int popSize = 1;
-    public File imageFolder = new File("c:/users/barry05/desktop");
+    public File imageFolder;
     public ImageProcessor[] lacSurf, dsSurf, areaSurf;
     public double areaCurve[];
     public double ds_max = -Double.MAX_VALUE, lac_max = -Double.MAX_VALUE,
             area_max = -Double.MAX_VALUE;
     private Random R = new Random();
-    private static int firstH = 20, lastH = 20, intervalH = 5, maxLength = 400000,
-            width = 1000, height = 500;
+    private static int firstH = 50, lastH = 50, intervalH = 5, maxLength = 40000,
+            width = 1200, height = 1200;
     private final String TITLE = "",
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
-    private static boolean showAllImages = true;
+    private static boolean showAllImages = false;
 
     public static void main(String args[]) {
         MyceliumGrower grower = new MyceliumGrower();
@@ -75,7 +74,7 @@ public class MyceliumGrower {
     }
 
     public void growMycelium(ByteProcessor ip, int thisIter, double hgu, int maxLength) {
-        int w = ip.getWidth(), h = ip.getHeight(), i, j, h0 = 0, h1, x0 = 2,
+        int w = ip.getWidth(), h = ip.getHeight(), i, j, h0 = 0, h1, x0 = w / 2,
                 y0 = h / 2, x, y, xlow = w / 2 - 1, xhigh = w / 2 + 1,
                 ylow = h / 2 - 1, yhigh = h / 2 + 1;
         double apex;
@@ -86,11 +85,11 @@ public class MyceliumGrower {
 
         ip.setValue(0);
         ArrayList hyphae = new ArrayList();
-        double angle = 0.0;
+        double angle = R.nextDouble() * 360;
 
         hyphae.add(new Hypha(x0, y0, angle, ip, hgu));
         h0++;
-        imageFolder = GenUtils.createDirectory(((Utilities.getFolder(imageFolder, "Choose_Location_for_Output", true)).getAbsolutePath()
+        imageFolder = GenUtils.createDirectory(((Utilities.getFolder(imageFolder, "Choose_Location_for_Output", false)).getAbsolutePath()
                 + "\\Mycelium\\" + decFormat.format(hgu) + "_" + maxLength));
         File results = null;
         PrintWriter outputStream = null;
@@ -108,35 +107,25 @@ public class MyceliumGrower {
         ProgressDialog dialog = new ProgressDialog(null, "HGU: " + hgu + " " + thisIter + " - Growing...", false, TITLE, false);
         dialog.setVisible(true);
         nutrientField = new FloatProcessor(w, h);
-        for (x = 0; x < w; x++) {
-            for (y = 0; y < h; y++) {
-                nutrientField.putPixelValue(x, y, 1.0 - Math.abs(0.5 * h - y) / (0.5 * h));
-            }
-        }
-        IJ.saveAs(new ImagePlus("", nutrientField), "TIF", imageFolder + "\\NF_Step_Init");
+        nutrientField.setValue(255.0);
+        nutrientField.fill();
         int hyphalCount = hyphae.size();
         double logMax = Math.log(maxLength);
-        double xmax = x0;
-        for (i = 0; totalLength < maxLength && hyphae.size() > 0; i++) {
+        for (i = 0; totalLength < maxLength; i++) {
             ip.setRoi((Roi) null);
-//            updateNutrientField(ip, i);
+            updateNutrientField(ip, i);
             IJ.freeMemory();
             dialog.updateProgress(Math.log(totalLength), logMax);
-//            densityField = ip.toFloat(0, null);
-//            blurrer.blur(densityField, radius);
+            densityField = ip.toFloat(0, null);
+            blurrer.blur(densityField, radius);
             h1 = h0;
             for (j = 0; j < h1; j++) {
                 Hypha current = (Hypha) hyphae.get(j);
-                current.grow(densityField, nutrientField, dfGradSens, noise, nfGradSens);
+                current.grow(densityField, nutrientField, gradSens, noise);
                 totalLength++;
                 x = current.getX();
                 y = current.getY();
-                if (x > xmax) {
-                    xmax = x;
-                }
-//                if (densityField.getPixelValue(x, y) < growThresh || nutrientField.getPixelValue(x, y) <= 0.0) {
-                if (Math.abs(y - 0.5 * h) / h > 0.2 + 0.04 * R.nextGaussian()
-                        || (xmax - x) > (0.1 + 0.02 * R.nextGaussian()) * w) {
+                if (densityField.getPixelValue(x, y) < growThresh || nutrientField.getPixelValue(x, y) <= 0.0) {
                     hyphae.remove(j);
                     j--;
                     h0--;
@@ -181,7 +170,6 @@ public class MyceliumGrower {
             outIP.setFont(new Font("Arial", Font.BOLD, 30));
             if (showAllImages) {
                 IJ.saveAs(new ImagePlus("", outIP), "PNG", imageFolder + "\\Step" + numFormat.format(i));
-//                IJ.saveAs(new ImagePlus("", nutrientField), "TIF", imageFolder + "\\NF_Step" + numFormat.format(i));
             }
         }
         outputStream.close();
@@ -191,11 +179,8 @@ public class MyceliumGrower {
 
     void updateNutrientField(ByteProcessor ip, int i) {
         FloatBlitter nutFieldBlit = new FloatBlitter(nutrientField);
-        FloatProcessor ipDup = (FloatProcessor) (new TypeConverter(ip, false)).convertToFloat(null);
-        ipDup.invert();
-        ipDup.multiply(1.0 / 255.0);
-        nutFieldBlit.copyBits(ipDup, 0, 0, FloatBlitter.SUBTRACT);
-        (new GaussianBlur()).blur(nutrientField, radius);
+        nutFieldBlit.copyBits(ip, 0, 0, FloatBlitter.MIN);
+        (new GaussianBlur()).blur(nutrientField, radius * 4.0);
     }
 
     public boolean showDialog(String title) {
