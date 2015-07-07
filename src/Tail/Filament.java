@@ -1,11 +1,11 @@
-package Mycelium;
+package Tail;
 
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Hypha {
+public class Filament {
 
     private double x, y, hgu;
     int length;
@@ -16,7 +16,7 @@ public class Hypha {
     boolean branchX = true;
     private double angle, branch = -70, branchOffset;
 
-    public Hypha(double xc, double yc, double a0, ImageProcessor ip, double hgu) {
+    public Filament(double xc, double yc, double a0, ImageProcessor ip, double hgu) {
         this.x = xc;
         this.y = yc;
         this.angle = a0;

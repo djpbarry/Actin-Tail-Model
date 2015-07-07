@@ -1,4 +1,4 @@
-package Mycelium;
+package Tail;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -8,7 +8,7 @@ import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
 import java.util.Random;
 
-public class Mycelium {
+public class Tail {
 
     ImagePlus imp;
     private static double hgu = 95;

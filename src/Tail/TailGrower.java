@@ -1,4 +1,4 @@
-package Mycelium;
+package Tail;
 
 import UtilClasses.Utilities;
 import IAClasses.ProgressDialog;
@@ -24,7 +24,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class MyceliumGrower {
+public class TailGrower {
 
     public double radius = 25.0;
     private FloatProcessor densityField, nutrientField;
@@ -44,7 +44,7 @@ public class MyceliumGrower {
     private static boolean showAllImages = true;
 
     public static void main(String args[]) {
-        MyceliumGrower grower = new MyceliumGrower();
+        TailGrower grower = new TailGrower();
         if (!grower.initialise()) {
             System.exit(-1);
         }
@@ -71,7 +71,7 @@ public class MyceliumGrower {
         }
     }
 
-    public MyceliumGrower() {
+    public TailGrower() {
     }
 
     public void growMycelium(ByteProcessor ip, int thisIter, double hgu, int maxLength) {
@@ -88,7 +88,7 @@ public class MyceliumGrower {
         ArrayList hyphae = new ArrayList();
         double angle = 0.0;
 
-        hyphae.add(new Hypha(x0, y0, angle, ip, hgu));
+        hyphae.add(new Filament(x0, y0, angle, ip, hgu));
         h0++;
         imageFolder = GenUtils.createDirectory(((Utilities.getFolder(imageFolder, "Choose_Location_for_Output", true)).getAbsolutePath()
                 + "\\Mycelium\\" + decFormat.format(hgu) + "_" + maxLength));
@@ -126,7 +126,7 @@ public class MyceliumGrower {
 //            blurrer.blur(densityField, radius);
             h1 = h0;
             for (j = 0; j < h1; j++) {
-                Hypha current = (Hypha) hyphae.get(j);
+                Filament current = (Filament) hyphae.get(j);
                 current.grow(densityField, nutrientField, dfGradSens, noise, nfGradSens);
                 totalLength++;
                 x = current.getX();
@@ -167,7 +167,7 @@ public class MyceliumGrower {
                             y = current.getY();
                         }
                         angle = current.getBranchAngle();
-                        hyphae.add(new Hypha(x, y, angle, ip, hgu));
+                        hyphae.add(new Filament(x, y, angle, ip, hgu));
                         current.resetLength();
                         current.resetBranchOffset();
                         h0++;
