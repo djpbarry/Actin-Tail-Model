@@ -7,7 +7,7 @@ import java.util.Random;
 
 public class Filament {
 
-    private double x, y, hgu;
+    private double x, y, branchRate;
     int length;
     ArrayList xPix = new ArrayList();
     ArrayList yPix = new ArrayList();
@@ -22,7 +22,7 @@ public class Filament {
         this.angle = a0;
         this.plot = ip;
         this.length = 0;
-        this.hgu = hgu;
+        this.branchRate = hgu;
         branchOffset = R.nextGaussian() * hgu * 0.2;
         if (R.nextBoolean()) {
             branchOffset *= -1;
@@ -100,7 +100,7 @@ public class Filament {
     }
 
     public void resetBranchOffset() {
-        branchOffset = R.nextGaussian() * hgu * 0.2;
+        branchOffset = R.nextGaussian() * branchRate * 0.2;
         if (R.nextBoolean()) {
             branchOffset *= -1;
         }
