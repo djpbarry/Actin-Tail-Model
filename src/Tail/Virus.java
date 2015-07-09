@@ -11,19 +11,20 @@ package Tail;
  */
 public class Virus {
 
-    private double x, y, radius, mass, xVel, yVel;
+    private double x, y, xVel, yVel;
+    private final double mass = 10e-15; // Mass of single vaccinia virion is ~10 fg - dx.doi.org/10.1016/j.snb.2005.08.047
+    private final double radius = 150.0; // Width of virion is 250 - 350nm
 
-    public Virus(double x, double y, double radius, double mass) {
+    public Virus(double x, double y) {
         this.x = x;
         this.y = y;
-        this.radius = radius;
         xVel = 0.0;
         yVel = 0.0;
     }
 
-    public void updateVelocity(double xForce, double yForce) {
-        double xA = xForce / mass;
-        double yA = yForce / mass;
+    public void updateVelocity(Force force) {
+        double xA = force.getxF() / mass;
+        double yA = force.getyF() / mass;
         xVel += xA;
         yVel += yA;
     }
@@ -32,4 +33,17 @@ public class Virus {
         x += xVel;
         y += yVel;
     }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public double getRadius() {
+        return radius;
+    }
+
 }

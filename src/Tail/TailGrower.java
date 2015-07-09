@@ -2,20 +2,14 @@ package Tail;
 
 import UtilClasses.Utilities;
 import IAClasses.ProgressDialog;
+import IAClasses.Utils;
 import UtilClasses.GenUtils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
-import ij.gui.Roi;
-import ij.plugin.filter.GaussianBlur;
 import ij.process.ByteProcessor;
-import ij.process.FloatBlitter;
-import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
-import ij.process.TypeConverter;
 import java.awt.Color;
-import java.awt.Font;
-import java.awt.Rectangle;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -27,7 +21,7 @@ import java.util.Random;
 public class TailGrower {
 
     public double radius = 25.0;
-    private FloatProcessor densityField, nutrientField;
+//    private FloatProcessor densityField, nutrientField;
     public double dfGradSens = 5000.0, nfGradSens = 500.0, noise = 1.5, growThresh = 150.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
     public ImageProcessor[] lacSurf, dsSurf, areaSurf;
@@ -40,8 +34,9 @@ public class TailGrower {
     private final String TITLE = "",
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
     private static boolean showAllImages = true;
-    private double res = 7; // One pixel equals 7 nm, approximate width of actin filament
-    private double virusRadius = 250.0/res;
+    private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
+    private double virusRadius = 250.0 / res;
+    private double capFactor = 1.0;
 
     public static void main(String args[]) {
         TailGrower grower = new TailGrower();
@@ -70,22 +65,18 @@ public class TailGrower {
     }
 
     public void grow(ByteProcessor ip, double branchRate, int maxLength) {
-        int w = ip.getWidth(), h = ip.getHeight(), i, j, h0 = 0, h1, x0 = 2,
-                y0 = h / 2, x, y, xlow = w / 2 - 1, xhigh = w / 2 + 1,
-                ylow = h / 2 - 1, yhigh = h / 2 + 1;
+        Random rand = new Random();
         double apex;
         DecimalFormat numFormat = new DecimalFormat("000");
         DecimalFormat decFormat = new DecimalFormat("0.000");
         int totalLength = 0;
-
         ip.setValue(0);
-        ArrayList filaments = new ArrayList();
-        double angle = 0.0;
-
-        filaments.add(new Filament(x0, y0, angle, ip, branchRate));
-        h0++;
+        ArrayList<Filament> filaments = new ArrayList();
+        Virus virus = new Virus(ip.getWidth() / 2.0, ip.getHeight() / 2.0);
+        filaments.add(createInitialFilament(virus, ip, branchRate));
+        int filCount = 1;
         imageFolder = GenUtils.createDirectory(((Utilities.getFolder(imageFolder, "Choose_Location_for_Output", true)).getAbsolutePath()
-                + "\\Mycelium\\" + decFormat.format(branchRate) + "_" + maxLength));
+                + "\\Sim_Actin_Tails\\" + decFormat.format(branchRate) + "_" + maxLength));
         File results = null;
         PrintWriter outputStream = null;
         try {
@@ -101,51 +92,40 @@ public class TailGrower {
         outputStream.println(resultsHeadings);
         ProgressDialog dialog = new ProgressDialog(null, "Branch Rate: " + branchRate + " - Growing...", false, TITLE, false);
         dialog.setVisible(true);
-        nutrientField = new FloatProcessor(w, h);
-        for (x = 0; x < w; x++) {
-            for (y = 0; y < h; y++) {
-                nutrientField.putPixelValue(x, y, 1.0 - Math.abs(0.5 * h - y) / (0.5 * h));
-            }
-        }
-        IJ.saveAs(new ImagePlus("", nutrientField), "TIF", imageFolder + "\\NF_Step_Init");
         int fCount = filaments.size();
         double logMax = Math.log(maxLength);
-        double xmax = x0;
-        for (i = 0; totalLength < maxLength && filaments.size() > 0; i++) {
-            ip.setRoi((Roi) null);
-//            updateNutrientField(ip, i);
+        int virRadius = (int) Math.round(virus.getRadius() / res);
+        for (int i = 0; totalLength < maxLength && filaments.size() > 0; i++) {
+//            ip.setRoi((Roi) null);
+            ip.drawOval((int) Math.round(virus.getX() / res) - virRadius,
+                    (int) Math.round(virus.getY() / res) - virRadius,
+                    2 * virRadius, 2 * virRadius);
             IJ.freeMemory();
             dialog.updateProgress(Math.log(totalLength), logMax);
-//            densityField = ip.toFloat(0, null);
-//            blurrer.blur(densityField, radius);
-            h1 = h0;
-            for (j = 0; j < h1; j++) {
-                Filament current = (Filament) filaments.get(j);
-                current.grow(densityField, nutrientField, dfGradSens, noise, nfGradSens);
-                totalLength++;
-                x = current.getX();
-                y = current.getY();
-                if (x > xmax) {
-                    xmax = x;
+            int f1 = filCount;
+            Force totalForce = new Force(0.0, 0.0);
+            for (int j = 0; j < f1; j++) {
+                Filament current = filaments.get(j);
+                int x = (int) Math.round(current.getX() / res);
+                int y = (int) Math.round(current.getY() / res);
+                if (current.grow(noise, virus)) {
+                    totalLength++;
+                    x = (int) Math.round(current.getX() / res);
+                    y = (int) Math.round(current.getY() / res);
+                    ip.drawPixel(x, y);
                 }
-//                if (densityField.getPixelValue(x, y) < growThresh || nutrientField.getPixelValue(x, y) <= 0.0) {
-                if (Math.abs(y - 0.5 * h) / h > 0.2 + 0.04 * R.nextGaussian()
-                        || (xmax - x) > (0.1 + 0.02 * R.nextGaussian()) * w) {
+                double clearance = Utils.calcDistance(x, y, virus.getX(), virus.getY());
+                if (clearance > rand.nextDouble() * res * branchRate * capFactor) {
                     filaments.remove(j);
                     j--;
-                    h0--;
-                    h1--;
+                    filCount--;
+                    f1--;
+                    if (filCount < 1) {
+                        filaments.add(createInitialFilament(virus, ip, branchRate));
+                        filCount++;
+                    }
                 } else {
-                    if (x <= xlow) {
-                        xlow = x - 1;
-                    } else if (x >= xhigh) {
-                        xhigh = x + 1;
-                    }
-                    if (y <= ylow) {
-                        ylow = y - 1;
-                    } else if (y >= yhigh) {
-                        yhigh = y + 1;
-                    }
+                    totalForce.addForce(current.calcForce(virus.getX(), virus.getY(), virus.getRadius()));
                     double l = current.getLength();
                     if (l > branchRate + current.getBranchOffset()) {
                         double e = R.nextGaussian() * branchRate * 0.04;
@@ -160,22 +140,22 @@ public class TailGrower {
                             x = current.getX();
                             y = current.getY();
                         }
-                        angle = current.getBranchAngle();
-                        filaments.add(new Filament(x, y, angle, ip, branchRate));
+                        double angle = current.getBranchAngle();
+                        filaments.add(new Filament(x, y, angle, branchRate, res));
                         current.resetLength();
                         current.resetBranchOffset();
-                        h0++;
+                        filCount++;
                         fCount++;
                     }
                 }
             }
-            ip.setRoi(new Rectangle(xlow, ylow, xhigh - xlow + 1, yhigh - ylow + 1));
+            virus.updateVelocity(totalForce);
+            virus.updatePosition();
+//            ip.setRoi(new Rectangle(xlow, ylow, xhigh - xlow + 1, yhigh - ylow + 1));
             outputStream.println(i + "\t" + fCount + "\t" + totalLength);
             ImageProcessor outIP = ip.duplicate();
-            outIP.setFont(new Font("Arial", Font.BOLD, 30));
             if (showAllImages) {
                 IJ.saveAs(new ImagePlus("", outIP), "PNG", imageFolder + "\\Step" + numFormat.format(i));
-//                IJ.saveAs(new ImagePlus("", nutrientField), "TIF", imageFolder + "\\NF_Step" + numFormat.format(i));
             }
         }
         outputStream.close();
@@ -183,13 +163,13 @@ public class TailGrower {
         dialog.dispose();
     }
 
-    void updateNutrientField(ByteProcessor ip, int i) {
-        FloatBlitter nutFieldBlit = new FloatBlitter(nutrientField);
-        FloatProcessor ipDup = (FloatProcessor) (new TypeConverter(ip, false)).convertToFloat(null);
-        ipDup.invert();
-        ipDup.multiply(1.0 / 255.0);
-        nutFieldBlit.copyBits(ipDup, 0, 0, FloatBlitter.SUBTRACT);
-        (new GaussianBlur()).blur(nutrientField, radius);
+    Filament createInitialFilament(Virus virus, ImageProcessor ip, double branchRate) {
+        Random rand = new Random();
+        double angle = 2.0 * Math.PI * rand.nextDouble();
+        double r = Math.abs(rand.nextGaussian()) * virus.getRadius() * 0.01 + virus.getRadius();
+        double x0 = (ip.getWidth() / 2.0 + r * Math.cos(angle)) * res;
+        double y0 = (ip.getHeight() / 2.0 + r * Math.sin(angle)) * res;
+        return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate, res);
     }
 
     public boolean showDialog(String title) {
