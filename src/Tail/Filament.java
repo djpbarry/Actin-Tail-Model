@@ -1,7 +1,6 @@
 package Tail;
 
 import IAClasses.Utils;
-import ij.process.FloatProcessor;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -11,10 +10,9 @@ public class Filament {
     int length;
     ArrayList<Double> xPix = new ArrayList();
     ArrayList<Double> yPix = new ArrayList();
-    Random R = new Random();
+    Random rand = new Random();
     boolean branchX = true;
     private double angle, branch = -70, branchOffset, thickness;
-    Random rand = new Random();
     private double hookeK = 1.0;
 
     public Filament(double xc, double yc, double a0, double hgu, double thickness) {
@@ -24,20 +22,20 @@ public class Filament {
         this.length = 0;
         this.branchRate = hgu;
         this.thickness = thickness;
-        branchOffset = R.nextGaussian() * hgu * 0.2;
-        if (R.nextBoolean()) {
+        branchOffset = rand.nextGaussian() * hgu * 0.2;
+        if (rand.nextBoolean()) {
             branchOffset *= -1;
         }
     }
 
     public boolean grow(double noise, Virus virus) {
-        double clearance = Utils.calcDistance(x, y, virus.getX(), virus.getY());
-        if (rand.nextDouble() * thickness < clearance) {
+        double clearance = Utils.calcDistance(x, y, virus.getX(), virus.getY()) - virus.getRadius();
+        if (clearance < rand.nextDouble() * thickness) {
             return false;
         }
         xPix.add(x);
         yPix.add(y);
-        angle += noise * R.nextGaussian();
+        angle += noise * rand.nextGaussian();
 
         double xVec = thickness * Math.cos(Math.toRadians(angle));
         double yVec = thickness * Math.sin(Math.toRadians(angle));
@@ -49,13 +47,13 @@ public class Filament {
     }
 
     Force calcForce(double xV, double yV, double r) {
-        double d = (Utils.calcDistance(x, y, xV, yV) - r);
-        if (Math.abs(d) > thickness) {
+        double d = Utils.calcDistance(x, y, xV, yV) - r;
+        if (d > 0.0) {
             return new Force(0.0, 0.0);
         } else {
             double mag = -hookeK * d;
-            double xD = x - xPix.get(length - 1);
-            double yD = y - yPix.get(length - 1);
+            double xD = xV - x;
+            double yD = yV - y;
             double theta = Math.PI * 2.0 * Utils.arcTan(xD, yD) / 360.0;
             return new Force(mag * Math.cos(theta), mag * Math.sin(theta));
         }
@@ -101,8 +99,8 @@ public class Filament {
     }
 
     public void resetBranchOffset() {
-        branchOffset = R.nextGaussian() * branchRate * 0.2;
-        if (R.nextBoolean()) {
+        branchOffset = rand.nextGaussian() * branchRate * 0.2;
+        if (rand.nextBoolean()) {
             branchOffset *= -1;
         }
     }

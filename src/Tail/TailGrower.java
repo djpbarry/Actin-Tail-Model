@@ -22,21 +22,22 @@ public class TailGrower {
 
     public double radius = 25.0;
 //    private FloatProcessor densityField, nutrientField;
-    public double dfGradSens = 5000.0, nfGradSens = 500.0, noise = 1.5, growThresh = 150.0;
+    public double noise = 1.5, growThresh = 150.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
     public ImageProcessor[] lacSurf, dsSurf, areaSurf;
     public double areaCurve[];
     public double ds_max = -Double.MAX_VALUE, lac_max = -Double.MAX_VALUE,
             area_max = -Double.MAX_VALUE;
     private Random R = new Random();
-    private static int hgu = 20, maxLength = 400000,
-            width = 1000, height = 500;
+    private static int hgu = 10, maxLength = 400000,
+            width = 1000, height = 1000;
     private final String TITLE = "",
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
     private static boolean showAllImages = true;
     private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private double virusRadius = 250.0 / res;
-    private double capFactor = 1.0;
+    private double capFactor = 2.0;
+    private int simultaneousFils = 1;
 
     public static void main(String args[]) {
         TailGrower grower = new TailGrower();
@@ -72,8 +73,10 @@ public class TailGrower {
         int totalLength = 0;
         ip.setValue(0);
         ArrayList<Filament> filaments = new ArrayList();
-        Virus virus = new Virus(ip.getWidth() / 2.0, ip.getHeight() / 2.0);
-        filaments.add(createInitialFilament(virus, ip, branchRate));
+        Virus virus = new Virus(res * ip.getWidth() / 2.0, res * ip.getHeight() / 2.0);
+        for (int i = 0; i < simultaneousFils; i++) {
+            filaments.add(createInitialFilament(virus, ip, branchRate));
+        }
         int filCount = 1;
         imageFolder = GenUtils.createDirectory(((Utilities.getFolder(imageFolder, "Choose_Location_for_Output", true)).getAbsolutePath()
                 + "\\Sim_Actin_Tails\\" + decFormat.format(branchRate) + "_" + maxLength));
@@ -95,32 +98,31 @@ public class TailGrower {
         int fCount = filaments.size();
         double logMax = Math.log(maxLength);
         int virRadius = (int) Math.round(virus.getRadius() / res);
-        for (int i = 0; totalLength < maxLength && filaments.size() > 0; i++) {
+        for (int i = 0; totalLength < maxLength && i < 1000 && !Double.isNaN(virus.getxVel())
+                && !Double.isNaN(virus.getyVel()); i++) {
 //            ip.setRoi((Roi) null);
-            ip.drawOval((int) Math.round(virus.getX() / res) - virRadius,
-                    (int) Math.round(virus.getY() / res) - virRadius,
-                    2 * virRadius, 2 * virRadius);
             IJ.freeMemory();
             dialog.updateProgress(Math.log(totalLength), logMax);
             int f1 = filCount;
             Force totalForce = new Force(0.0, 0.0);
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
-                int x = (int) Math.round(current.getX() / res);
-                int y = (int) Math.round(current.getY() / res);
+                int x;
+                int y;
                 if (current.grow(noise, virus)) {
                     totalLength++;
                     x = (int) Math.round(current.getX() / res);
                     y = (int) Math.round(current.getY() / res);
                     ip.drawPixel(x, y);
                 }
-                double clearance = Utils.calcDistance(x, y, virus.getX(), virus.getY());
+                double clearance = Utils.calcDistance(current.getX(), current.getY(),
+                        virus.getX(), virus.getY()) - virus.getRadius();
                 if (clearance > rand.nextDouble() * res * branchRate * capFactor) {
                     filaments.remove(j);
                     j--;
                     filCount--;
                     f1--;
-                    if (filCount < 1) {
+                    if (filCount < simultaneousFils) {
                         filaments.add(createInitialFilament(virus, ip, branchRate));
                         filCount++;
                     }
@@ -153,9 +155,17 @@ public class TailGrower {
             virus.updatePosition();
 //            ip.setRoi(new Rectangle(xlow, ylow, xhigh - xlow + 1, yhigh - ylow + 1));
             outputStream.println(i + "\t" + fCount + "\t" + totalLength);
-            ImageProcessor outIP = ip.duplicate();
+            ImageProcessor filOut = ip.duplicate();
+            ImageProcessor virOut = ip.duplicate();
+            virOut.setValue(255);
+            virOut.fill();
+            virOut.setValue(0);
+            virOut.drawOval((int) Math.round(virus.getX() / res) - virRadius,
+                    (int) Math.round(virus.getY() / res) - virRadius,
+                    2 * virRadius, 2 * virRadius);
             if (showAllImages) {
-                IJ.saveAs(new ImagePlus("", outIP), "PNG", imageFolder + "\\Step" + numFormat.format(i));
+                IJ.saveAs(new ImagePlus("", filOut), "PNG", imageFolder + "\\Filaments_Step" + numFormat.format(i));
+                IJ.saveAs(new ImagePlus("", virOut), "PNG", imageFolder + "\\Virus_Step" + numFormat.format(i));
             }
         }
         outputStream.close();
@@ -165,10 +175,10 @@ public class TailGrower {
 
     Filament createInitialFilament(Virus virus, ImageProcessor ip, double branchRate) {
         Random rand = new Random();
-        double angle = 2.0 * Math.PI * rand.nextDouble();
-        double r = Math.abs(rand.nextGaussian()) * virus.getRadius() * 0.01 + virus.getRadius();
-        double x0 = (ip.getWidth() / 2.0 + r * Math.cos(angle)) * res;
-        double y0 = (ip.getHeight() / 2.0 + r * Math.sin(angle)) * res;
+        double angle = 2.0*Math.PI * rand.nextDouble()/3.0;
+        double r = rand.nextDouble() * res * branchRate + virus.getRadius();
+        double x0 = (virus.getX() + r * Math.cos(angle));
+        double y0 = (virus.getY() + r * Math.sin(angle));
         return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate, res);
     }
 
