@@ -76,12 +76,12 @@ public class Filament {
         length = 1;
     }
 
-    public int getBranchx(double d) {
-        return (int) Math.round(xPix.get(length - (int) Math.round(d) - 1));
+    public double getBranchx(int d) {
+        return xPix.get(length - d - 1);
     }
 
-    public int getBranchy(double d) {
-        return (int) Math.round(yPix.get(length - (int) Math.round(d) - 1));
+    public double getBranchy(int d) {
+        return yPix.get(length - d - 1);
     }
 
     public double getBranchAngle() {
@@ -89,12 +89,12 @@ public class Filament {
         return (branch + angle);
     }
 
-    public int getX() {
-        return (int) x;
+    public double getX() {
+        return x;
     }
 
-    public int getY() {
-        return (int) y;
+    public double getY() {
+        return y;
     }
 
     public double getBranchOffset() {

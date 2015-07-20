@@ -17,24 +17,27 @@ import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Random;
+import org.apache.commons.math3.analysis.function.Gaussian;
 
 public class TailGrower {
 
 //    private FloatProcessor densityField, nutrientField;
-    public double noise = 1.5, growThresh = 150.0;
+    public double noise = 3.0, growThresh = 150.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
     public double areaCurve[];
     public double ds_max = -Double.MAX_VALUE, lac_max = -Double.MAX_VALUE,
             area_max = -Double.MAX_VALUE;
     private Random R = new Random();
-    private static int hgu = 10, maxLength = 400000,
-            width = 1000, height = 1000;
+    private static int hgu = 5, maxLength = 400000,
+            width = 1200, height = 1200;
     private final String TITLE = "",
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
     private static boolean showAllImages = true;
     private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private double capFactor = 2.0;
-    private int simultaneousFils = 2;
+    private int simultaneousFils = 20;
+    private double pZoneDegrees = 30.0;
+    Random rand = new Random();
 
     public static void main(String args[]) {
         TailGrower grower = new TailGrower();
@@ -63,7 +66,6 @@ public class TailGrower {
     }
 
     public void grow(ByteProcessor ip, double branchRate, int maxLength) {
-        Random rand = new Random();
         double apex;
         DecimalFormat numFormat = new DecimalFormat("000");
         DecimalFormat decFormat = new DecimalFormat("0.000");
@@ -95,7 +97,7 @@ public class TailGrower {
         int fCount = filaments.size();
         double logMax = Math.log(maxLength);
         int virRadius = (int) Math.round(virus.getRadius() / res);
-        for (int i = 0; totalLength < maxLength && i < 1000 && !Double.isNaN(virus.getxVel())
+        for (int i = 0; totalLength < maxLength && i < 1200 && !Double.isNaN(virus.getxVel())
                 && !Double.isNaN(virus.getyVel()); i++) {
 //            ip.setRoi((Roi) null);
             IJ.freeMemory();
@@ -104,17 +106,15 @@ public class TailGrower {
             Force totalForce = new Force(0.0, 0.0);
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
-                int x;
-                int y;
                 if (current.grow(noise, virus)) {
                     totalLength++;
-                    x = (int) Math.round(current.getX() / res);
-                    y = (int) Math.round(current.getY() / res);
+                    int x = (int) Math.round(current.getX() / res);
+                    int y = (int) Math.round(current.getY() / res);
                     ip.drawPixel(x, y);
                 }
-                double clearance = Utils.calcDistance(current.getX(), current.getY(),
+                double pGrow = Utils.calcDistance(current.getX(), current.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
-                if (clearance > rand.nextDouble() * res * branchRate * capFactor) {
+                if (pGrow > (rand.nextDouble() * res * branchRate * capFactor)) {
                     filaments.remove(j);
                     j--;
                     filCount--;
@@ -132,9 +132,10 @@ public class TailGrower {
                             e *= -1;
                         }
                         apex = l * 0.2 + e;
+                        double x, y;
                         try {
-                            x = current.getBranchx(apex);
-                            y = current.getBranchy(apex);
+                            x = current.getBranchx((int) Math.round(apex));
+                            y = current.getBranchy((int) Math.round(apex));
                         } catch (IndexOutOfBoundsException g) {
                             x = current.getX();
                             y = current.getY();
@@ -171,15 +172,35 @@ public class TailGrower {
     }
 
     Filament createInitialFilament(Virus virus, ImageProcessor ip, double branchRate) {
-        Random rand = new Random();
-        double angle;
-        double dangle = Utils.arcTan(virus.getxVel(), virus.getyVel()) - 180.0 + 30.0 * rand.nextGaussian();
-        angle = Math.toRadians(dangle);
+        double angle = Math.toRadians(getInitAngle(virus));
         double r = rand.nextDouble() * res * branchRate + virus.getRadius();
-        double x0, y0;
-        x0 = (virus.getX() + r * Math.cos(angle));
-        y0 = (virus.getY() - r * Math.sin(angle));
+        double x0 = virus.getX() + r * Math.cos(angle);
+        double y0 = virus.getY() - r * Math.sin(angle);
         return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate, res);
+    }
+
+    private double getInitAngle(Virus virus) {
+        double angle = Utils.arcTan(virus.getxVel(), virus.getyVel()) - 180.0 + pZoneDegrees * rand.nextGaussian();
+        if (angle < 0.0) {
+            angle += 360.0;
+        }
+        return angle;
+    }
+
+    private double getGrowP(Virus virus, double x, double y) {
+        double angle = Utils.arcTan(virus.getxVel(), virus.getyVel());
+        double peakPos = angle - 180.0;
+        if (peakPos < 0.0) {
+            peakPos += 360.0;
+        }
+        double pos = Utils.arcTan(x - virus.getX(), y - virus.getY());
+        if (pos > 180.0 || peakPos > 180.0) {
+            pos -= 180.0;
+            peakPos -= 180.0;
+        }
+        Gaussian gaussian = new Gaussian(0.0, pZoneDegrees);
+        double val = gaussian.value(pos - peakPos);
+        return val;
     }
 
     public boolean showDialog(String title) {
