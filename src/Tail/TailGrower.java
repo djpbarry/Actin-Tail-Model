@@ -20,11 +20,9 @@ import java.util.Random;
 
 public class TailGrower {
 
-    public double radius = 25.0;
 //    private FloatProcessor densityField, nutrientField;
     public double noise = 1.5, growThresh = 150.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
-    public ImageProcessor[] lacSurf, dsSurf, areaSurf;
     public double areaCurve[];
     public double ds_max = -Double.MAX_VALUE, lac_max = -Double.MAX_VALUE,
             area_max = -Double.MAX_VALUE;
@@ -35,9 +33,8 @@ public class TailGrower {
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
     private static boolean showAllImages = true;
     private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
-    private double virusRadius = 250.0 / res;
     private double capFactor = 2.0;
-    private int simultaneousFils = 1;
+    private int simultaneousFils = 2;
 
     public static void main(String args[]) {
         TailGrower grower = new TailGrower();
@@ -175,10 +172,13 @@ public class TailGrower {
 
     Filament createInitialFilament(Virus virus, ImageProcessor ip, double branchRate) {
         Random rand = new Random();
-        double angle = 2.0*Math.PI * rand.nextDouble()/3.0;
+        double angle;
+        double dangle = Utils.arcTan(virus.getxVel(), virus.getyVel()) - 180.0 + 30.0 * rand.nextGaussian();
+        angle = Math.toRadians(dangle);
         double r = rand.nextDouble() * res * branchRate + virus.getRadius();
-        double x0 = (virus.getX() + r * Math.cos(angle));
-        double y0 = (virus.getY() + r * Math.sin(angle));
+        double x0, y0;
+        x0 = (virus.getX() + r * Math.cos(angle));
+        y0 = (virus.getY() - r * Math.sin(angle));
         return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate, res);
     }
 

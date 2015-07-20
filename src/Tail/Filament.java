@@ -26,6 +26,9 @@ public class Filament {
         if (rand.nextBoolean()) {
             branchOffset *= -1;
         }
+        if (rand.nextBoolean()) {
+            branch *= -1;
+        }
     }
 
     public boolean grow(double noise, Virus virus) {
@@ -38,7 +41,7 @@ public class Filament {
         angle += noise * rand.nextGaussian();
 
         double xVec = thickness * Math.cos(Math.toRadians(angle));
-        double yVec = thickness * Math.sin(Math.toRadians(angle));
+        double yVec = -thickness * Math.sin(Math.toRadians(angle));
 
         x += xVec;
         y += yVec;
@@ -54,8 +57,8 @@ public class Filament {
             double mag = -hookeK * d;
             double xD = xV - x;
             double yD = yV - y;
-            double theta = Math.PI * 2.0 * Utils.arcTan(xD, yD) / 360.0;
-            return new Force(mag * Math.cos(theta), mag * Math.sin(theta));
+            double theta = Math.toRadians(Utils.arcTan(xD, yD));
+            return new Force(mag * Math.cos(theta), -mag * Math.sin(theta));
         }
     }
 

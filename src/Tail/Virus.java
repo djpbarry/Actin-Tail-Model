@@ -32,11 +32,11 @@ public class Virus {
 
     public void updateVelocity(Force filamentForce) {
         updateDragForce();
-        System.out.println("xF: " + filamentForce.getxF() + " yF: " + filamentForce.getyF()
-                + " xD: " + dragForce.getxF() + " yD: " + dragForce.getyF()
-                + " xVel: " + xVel + " yVel: " + yVel);
-        double xA = (filamentForce.getxF() + dragForce.getxF()) / mass;
-        double yA = (filamentForce.getyF() + dragForce.getyF()) / mass;
+//        System.out.println("xF: " + filamentForce.getxF() + " yF: " + filamentForce.getyF()
+//                + " xD: " + dragForce.getxF() + " yD: " + dragForce.getyF()
+//                + " xVel: " + xVel + " yVel: " + yVel);
+        double xA = r.nextGaussian() + (filamentForce.getxF() + dragForce.getxF()) / mass;
+        double yA = r.nextGaussian() + (filamentForce.getyF() + dragForce.getyF()) / mass;
         xVel += xA;
         yVel += yA;
     }
