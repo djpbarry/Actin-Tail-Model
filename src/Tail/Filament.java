@@ -12,16 +12,15 @@ public class Filament {
     ArrayList<Double> yPix = new ArrayList();
     Random rand = new Random();
     boolean branchX = true;
-    private double angle, branch = -70, branchOffset, thickness;
+    private double angle, branch = -70, branchOffset, thickness = 7;
     private double hookeK = 1.0;
 
-    public Filament(double xc, double yc, double a0, double hgu, double thickness) {
+    public Filament(double xc, double yc, double a0, double hgu) {
         this.x = xc;
         this.y = yc;
         this.angle = a0;
         this.length = 0;
         this.branchRate = hgu;
-        this.thickness = thickness;
         branchOffset = rand.nextGaussian() * hgu * 0.2;
         if (rand.nextBoolean()) {
             branchOffset *= -1;

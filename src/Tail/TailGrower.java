@@ -28,13 +28,13 @@ public class TailGrower {
     public double ds_max = -Double.MAX_VALUE, lac_max = -Double.MAX_VALUE,
             area_max = -Double.MAX_VALUE;
     private Random R = new Random();
-    private static int hgu = 5, maxLength = 400000,
-            width = 1200, height = 1200;
+    private static int hgu = 20, maxLength = 400000,
+            width = 1000, height = 1000;
     private final String TITLE = "",
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
     private static boolean showAllImages = true;
     private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
-    private double capFactor = 2.0;
+    private double capFactor = 100.0;
     private int simultaneousFils = 20;
     private double pZoneDegrees = 30.0;
     Random rand = new Random();
@@ -97,7 +97,7 @@ public class TailGrower {
         int fCount = filaments.size();
         double logMax = Math.log(maxLength);
         int virRadius = (int) Math.round(virus.getRadius() / res);
-        for (int i = 0; totalLength < maxLength && i < 1200 && !Double.isNaN(virus.getxVel())
+        for (int i = 0; totalLength < maxLength && i < 2000 && !Double.isNaN(virus.getxVel())
                 && !Double.isNaN(virus.getyVel()); i++) {
 //            ip.setRoi((Roi) null);
             IJ.freeMemory();
@@ -114,7 +114,10 @@ public class TailGrower {
                 }
                 double pGrow = Utils.calcDistance(current.getX(), current.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
-                if (pGrow > (rand.nextDouble() * res * branchRate * capFactor)) {
+//                if (pGrow > (rand.nextDouble() * res * branchRate * capFactor)
+//                        * getGrowP(virus, current.getX(), current.getY())) {
+                if (pGrow > (rand.nextDouble() * branchRate * capFactor/res)
+                        * getGrowP(virus, current.getX(), current.getY())) {
                     filaments.remove(j);
                     j--;
                     filCount--;
@@ -141,7 +144,7 @@ public class TailGrower {
                             y = current.getY();
                         }
                         double angle = current.getBranchAngle();
-                        filaments.add(new Filament(x, y, angle, branchRate, res));
+                        filaments.add(new Filament(x, y, angle, branchRate));
                         current.resetLength();
                         current.resetBranchOffset();
                         filCount++;
@@ -158,7 +161,7 @@ public class TailGrower {
             virOut.setValue(255);
             virOut.fill();
             virOut.setValue(0);
-            virOut.drawOval((int) Math.round(virus.getX() / res) - virRadius,
+            virOut.fillOval((int) Math.round(virus.getX() / res) - virRadius,
                     (int) Math.round(virus.getY() / res) - virRadius,
                     2 * virRadius, 2 * virRadius);
             if (showAllImages) {
@@ -173,10 +176,10 @@ public class TailGrower {
 
     Filament createInitialFilament(Virus virus, ImageProcessor ip, double branchRate) {
         double angle = Math.toRadians(getInitAngle(virus));
-        double r = rand.nextDouble() * res * branchRate + virus.getRadius();
+        double r = rand.nextDouble() * branchRate/res + virus.getRadius();
         double x0 = virus.getX() + r * Math.cos(angle);
         double y0 = virus.getY() - r * Math.sin(angle);
-        return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate, res);
+        return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate);
     }
 
     private double getInitAngle(Virus virus) {
@@ -193,13 +196,16 @@ public class TailGrower {
         if (peakPos < 0.0) {
             peakPos += 360.0;
         }
+//        System.out.print("peakPos: " + peakPos);
         double pos = Utils.arcTan(x - virus.getX(), y - virus.getY());
+//        System.out.print(" pos: " + pos);
         if (pos > 180.0 || peakPos > 180.0) {
             pos -= 180.0;
             peakPos -= 180.0;
         }
         Gaussian gaussian = new Gaussian(0.0, pZoneDegrees);
-        double val = gaussian.value(pos - peakPos);
+        double val = gaussian.value(pos - peakPos) / gaussian.value(0.0);
+//        System.out.println(" diff: " + (pos - peakPos) + " val: " + val);
         return val;
     }
 
