@@ -5,6 +5,7 @@
  */
 package Tail;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 /**
@@ -15,19 +16,22 @@ public class Virus {
 
     private double x, y, xVel, yVel;
 //    private final double mass = 10e-15; // Mass of single vaccinia virion is ~10 fg - dx.doi.org/10.1016/j.snb.2005.08.047
-    private final double mass = 10.0;
+    private final double mass = 100.0;
     private final double radius = 150.0; // Width of virion is 250 - 350nm
     private Force dragForce;
     private final double rho = 1.0;
     private final double area = Math.PI * radius;
     private final double cD = 0.0005;
-    Random r = new Random();
+    private Random r = new Random();
+    private ArrayList<double[]> vels;
 
     public Virus(double x, double y) {
         this.x = x;
         this.y = y;
         xVel = 0.0;
         yVel = 0.0;
+        vels = new ArrayList();
+        vels.add(new double[]{xVel, yVel});
     }
 
     public void updateVelocity(Force filamentForce) {
@@ -35,10 +39,11 @@ public class Virus {
 //        System.out.println("xF: " + filamentForce.getxF() + " yF: " + filamentForce.getyF()
 //                + " xD: " + dragForce.getxF() + " yD: " + dragForce.getyF()
 //                + " xVel: " + xVel + " yVel: " + yVel);
-        double xA = r.nextGaussian() + (filamentForce.getxF() + dragForce.getxF()) / mass;
-        double yA = r.nextGaussian() + (filamentForce.getyF() + dragForce.getyF()) / mass;
+        double xA = (filamentForce.getxF() + dragForce.getxF()) / mass;
+        double yA = (filamentForce.getyF() + dragForce.getyF()) / mass;
         xVel += xA;
         yVel += yA;
+        vels.add(new double[]{xVel, yVel});
     }
 
     public void updatePosition() {
@@ -86,4 +91,14 @@ public class Virus {
         this.yVel = yVel;
     }
 
+    public double[] getVelAv(int stepSize) {
+        double xVA = 0.0;
+        double yVA = 0.0;
+        int s = vels.size();
+        for (int i = 0; i < stepSize && i < s; i++) {
+            xVA += vels.get(s - i - 1)[0];
+            yVA += vels.get(s - i - 1)[1];
+        }
+        return new double[]{xVA / stepSize, yVA / stepSize};
+    }
 }

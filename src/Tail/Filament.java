@@ -50,15 +50,15 @@ public class Filament {
 
     Force calcForce(double xV, double yV, double r) {
         double d = Utils.calcDistance(x, y, xV, yV) - r;
-        if (d > 0.0) {
-            return new Force(0.0, 0.0);
-        } else {
+//        if (d > 0.0) {
+//            return new Force(0.0, 0.0);
+//        } else {
             double mag = -hookeK * d;
             double xD = xV - x;
             double yD = yV - y;
             double theta = Math.toRadians(Utils.arcTan(xD, yD));
             return new Force(mag * Math.cos(theta), -mag * Math.sin(theta));
-        }
+//        }
     }
 
     public int getLength() {
