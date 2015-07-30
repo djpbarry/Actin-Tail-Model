@@ -13,7 +13,7 @@ public class Filament {
     Random rand = new Random();
     boolean branchX = true;
     private double angle, branch = -70, branchOffset, thickness = 7;
-    private double hookeK = 1.0;
+    private double hookeFil = 10.0, hookeBond = 1.0;
 
     public Filament(double xc, double yc, double a0, double hgu) {
         this.x = xc;
@@ -48,17 +48,18 @@ public class Filament {
         return true;
     }
 
-    Force calcForce(double xV, double yV, double r) {
+    Energy calcPE(double xV, double yV, double r) {
         double d = Utils.calcDistance(x, y, xV, yV) - r;
-//        if (d > 0.0) {
-//            return new Force(0.0, 0.0);
-//        } else {
-            double mag = -hookeK * d;
-            double xD = xV - x;
-            double yD = yV - y;
-            double theta = Math.toRadians(Utils.arcTan(xD, yD));
-            return new Force(mag * Math.cos(theta), -mag * Math.sin(theta));
-//        }
+        double mag = 0.0;
+        if (d < 0.0) {
+            mag = 0.5 * hookeFil * Math.pow(d, 2.0);
+        } else if (d > 0.0 && d < thickness) {
+            mag = -0.5 * hookeBond * Math.pow(d, 2.0);
+        }
+        double xD = xV - x;
+        double yD = yV - y;
+        double theta = Math.toRadians(Utils.arcTan(xD, yD));
+        return new Energy(mag * Math.cos(theta), -mag * Math.sin(theta));
     }
 
     public int getLength() {

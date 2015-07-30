@@ -17,11 +17,10 @@ public class Virus {
     private double x, y, xVel, yVel;
 //    private final double mass = 10e-15; // Mass of single vaccinia virion is ~10 fg - dx.doi.org/10.1016/j.snb.2005.08.047
     private final double mass = 100.0;
-    private final double radius = 150.0; // Width of virion is 250 - 350nm
-    private Force dragForce;
     private final double rho = 1.0;
-    private final double area = Math.PI * radius;
-    private final double cD = 0.0005;
+    private final double radius = 150.0; // Width of virion is 250 - 350nm
+    private final double area = Math.PI * radius * radius;
+    private final double cD = 0.00005;
     private Random r = new Random();
     private ArrayList<double[]> vels;
 
@@ -34,21 +33,41 @@ public class Virus {
         vels.add(new double[]{xVel, yVel});
     }
 
-    public void updateVelocity(Force filamentForce) {
-        updateDragForce();
-//        System.out.println("xF: " + filamentForce.getxF() + " yF: " + filamentForce.getyF()
-//                + " xD: " + dragForce.getxF() + " yD: " + dragForce.getyF()
-//                + " xVel: " + xVel + " yVel: " + yVel);
-        double xA = (filamentForce.getxF() + dragForce.getxF()) / mass;
-        double yA = (filamentForce.getyF() + dragForce.getyF()) / mass;
-        xVel += xA;
-        yVel += yA;
+    public void updateVelocity(Energy Es, double t) {
+        double xInc1 = 2.0 * Es.getxE() / mass;
+        if (Es.getxE() > 0.0) {
+            xVel += Math.sqrt(xInc1);
+        } else {
+            xVel += -Math.sqrt(-xInc1);
+        }
+        double xDrag = t * calcDragForce(xVel) / mass;
+        if (Math.abs(xDrag) > Math.abs(xVel)) {
+            xVel = 0.0;
+        } else {
+            xVel -= t * calcDragForce(xVel) / mass;
+        }
+
+        double yInc1 = 2.0 * Es.getyE() / mass;
+        if (Es.getyE() > 0.0) {
+            yVel += Math.sqrt(yInc1);
+        } else {
+            yVel += -Math.sqrt(-yInc1);
+        }
+        double yDrag = t * calcDragForce(yVel) / mass;
+        if (Math.abs(yDrag) > Math.abs(yVel)) {
+            yVel = 0.0;
+        } else {
+            yVel -= t * calcDragForce(yVel) / mass;
+        }
+        System.out.println("xVel: " + xVel + " yVel: " + yVel);
         vels.add(new double[]{xVel, yVel});
+        x += xVel * t;
+        y += yVel * t;
     }
 
-    public void updatePosition() {
-        x += xVel;
-        y += yVel;
+    public void brownian() {
+        x += -2.0 + 4.0 * r.nextDouble();
+        y += -2.0 + 4.0 * r.nextDouble();
     }
 
     public double getX() {
@@ -63,32 +82,12 @@ public class Virus {
         return radius;
     }
 
-    void updateDragForce() {
-        double xDF = 0.5 * rho * area * cD * xVel * xVel;
-        if (xVel > 0.0) {
-            xDF *= -1.0;
+    double calcDragForce(double vel) {
+        double vInc = 0.5 * rho * area * cD * vel * vel;
+        if (vel < 0.0) {
+            vInc *= -1.0;
         }
-        double yDF = 0.5 * rho * area * cD * yVel * yVel;
-        if (yVel > 0.0) {
-            yDF *= -1.0;
-        }
-        dragForce = new Force(xDF, yDF);
-    }
-
-    public double getxVel() {
-        return xVel;
-    }
-
-    public void setxVel(double xVel) {
-        this.xVel = xVel;
-    }
-
-    public double getyVel() {
-        return yVel;
-    }
-
-    public void setyVel(double yVel) {
-        this.yVel = yVel;
+        return vInc;
     }
 
     public double[] getVelAv(int stepSize) {
