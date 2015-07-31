@@ -6,25 +6,20 @@ import java.util.Random;
 
 public class Filament {
 
-    private double x, y, branchRate;
+    private double x, y;
     int length;
     ArrayList<Double> xPix = new ArrayList();
     ArrayList<Double> yPix = new ArrayList();
     Random rand = new Random();
     boolean branchX = true;
-    private double angle, branch = -70, branchOffset, thickness = 7;
+    private double angle, branch = -70, thickness = 7;
     private double hookeFil = 10.0, hookeBond = 1.0;
 
-    public Filament(double xc, double yc, double a0, double hgu) {
+    public Filament(double xc, double yc, double a0) {
         this.x = xc;
         this.y = yc;
         this.angle = a0;
         this.length = 0;
-        this.branchRate = hgu;
-        branchOffset = rand.nextGaussian() * hgu * 0.2;
-        if (rand.nextBoolean()) {
-            branchOffset *= -1;
-        }
         if (rand.nextBoolean()) {
             branch *= -1;
         }
@@ -76,14 +71,6 @@ public class Filament {
         length = 1;
     }
 
-    public double getBranchx(int d) {
-        return xPix.get(length - d - 1);
-    }
-
-    public double getBranchy(int d) {
-        return yPix.get(length - d - 1);
-    }
-
     public double getBranchAngle() {
         branch += -2 * branch;
         return (branch + angle);
@@ -97,14 +84,7 @@ public class Filament {
         return y;
     }
 
-    public double getBranchOffset() {
-        return branchOffset;
-    }
-
-    public void resetBranchOffset() {
-        branchOffset = rand.nextGaussian() * branchRate * 0.2;
-        if (rand.nextBoolean()) {
-            branchOffset *= -1;
-        }
+    public double getThickness() {
+        return thickness;
     }
 }

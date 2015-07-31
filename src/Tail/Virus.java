@@ -23,6 +23,7 @@ public class Virus {
     private final double cD = 0.00005;
     private Random r = new Random();
     private ArrayList<double[]> vels;
+    private double brownian = 10.0;
 
     public Virus(double x, double y) {
         this.x = x;
@@ -66,8 +67,8 @@ public class Virus {
     }
 
     public void brownian() {
-        x += -2.0 + 4.0 * r.nextDouble();
-        y += -2.0 + 4.0 * r.nextDouble();
+        x += -brownian/2.0 + brownian * r.nextDouble();
+        y += -brownian/2.0 + brownian * r.nextDouble();
     }
 
     public double getX() {

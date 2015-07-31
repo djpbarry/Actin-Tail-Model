@@ -22,13 +22,13 @@ import org.apache.commons.math3.analysis.function.Gaussian;
 public class TailGrower {
 
 //    private FloatProcessor densityField, nutrientField;
-    public double noise = 5.0, growThresh = 150.0;
+    public double noise = 20.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
     public double areaCurve[];
     public double ds_max = -Double.MAX_VALUE, lac_max = -Double.MAX_VALUE,
             area_max = -Double.MAX_VALUE;
     private Random R = new Random();
-    private static int hgu = 20, maxSteps = 1500,
+    private static int maxSteps = 1500,
             width = 1500, height = 1500;
     private final String TITLE = "",
             resultsHeadings = "Iterations\tNumber of Tips\tTotal Length";
@@ -36,7 +36,9 @@ public class TailGrower {
     private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private double capFactor = 150.0;
     private int simultaneousFils = 20;
-    private double pZoneDegrees = 45.0;
+    private double pZoneDegrees = 50.0;
+    private double minFilLengthForBranch = 50.0;
+    private double branchZoneWidth = res;
     private double t = 1.0;
     Random rand = new Random();
 
@@ -60,26 +62,24 @@ public class TailGrower {
         ByteProcessor bp = new ByteProcessor(width, height);
         bp.setColor(Color.white);
         bp.fill();
-        grow(bp, hgu, maxSteps);
+        grow(bp, maxSteps);
     }
 
     public TailGrower() {
     }
 
-    public void grow(ByteProcessor ip, double branchRate, int maxSteps) {
-        double apex;
+    public void grow(ByteProcessor ip, int maxSteps) {
         DecimalFormat numFormat = new DecimalFormat("000");
-        DecimalFormat decFormat = new DecimalFormat("0.000");
         int totalLength = 0;
         ip.setValue(0);
         ArrayList<Filament> filaments = new ArrayList();
         Virus virus = new Virus(res * ip.getWidth() / 2.0, res * ip.getHeight() / 2.0);
         for (int i = 0; i < simultaneousFils; i++) {
-            filaments.add(createInitialFilament(virus, ip, branchRate));
+            filaments.add(createInitialFilament(virus, ip));
         }
         int filCount = 1;
         imageFolder = new File(GenUtils.openResultsDirectory((Utilities.getFolder(imageFolder, "Choose_Location_for_Output", true)).getAbsolutePath()
-                + "\\Sim_Actin_Tails\\" + decFormat.format(branchRate) + "_" + maxSteps, "\\"));
+                + "\\Sim_Actin_Tails\\" + "_" + maxSteps, "\\"));
         File results = null;
         PrintWriter outputStream = null;
         try {
@@ -93,7 +93,7 @@ public class TailGrower {
             IJ.error("Could not write to results file.");
         }
         outputStream.println(resultsHeadings);
-        ProgressDialog dialog = new ProgressDialog(null, "Branch Rate: " + branchRate + " - Growing...", false, TITLE, false);
+        ProgressDialog dialog = new ProgressDialog(null, "Growing...", false, TITLE, false);
         dialog.setVisible(true);
         int fCount = filaments.size();
         int virRadius = (int) Math.round(virus.getRadius() / res);
@@ -112,9 +112,9 @@ public class TailGrower {
                     int y = (int) Math.round(current.getY() / res);
                     ip.drawPixel(x, y);
                 }
-                double pGrow = Utils.calcDistance(current.getX(), current.getY(),
+                double dist = Utils.calcDistance(current.getX(), current.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
-                if (pGrow > (rand.nextDouble() * branchRate * capFactor / res)
+                if (dist > (rand.nextDouble() * branchZoneWidth * capFactor / res)
                         * getGrowP(virus, current.getX(), current.getY())) {
 //                if (pGrow > (rand.nextDouble() * branchRate * capFactor / res)) {
                     filaments.remove(j);
@@ -122,30 +122,18 @@ public class TailGrower {
                     filCount--;
                     f1--;
                     if (filCount < simultaneousFils) {
-                        filaments.add(createInitialFilament(virus, ip, branchRate));
+                        filaments.add(createInitialFilament(virus, ip));
                         filCount++;
                     }
                 } else {
                     netEnergy.addEnergy(current.calcPE(virus.getX(), virus.getY(), virus.getRadius()));
-                    double l = current.getLength();
-                    if (l > branchRate + current.getBranchOffset()) {
-                        double e = R.nextGaussian() * branchRate * 0.04;
-                        if (R.nextBoolean()) {
-                            e *= -1;
-                        }
-                        apex = l * 0.2 + e;
-                        double x, y;
-                        try {
-                            x = current.getBranchx((int) Math.round(apex));
-                            y = current.getBranchy((int) Math.round(apex));
-                        } catch (IndexOutOfBoundsException g) {
-                            x = current.getX();
-                            y = current.getY();
-                        }
+                    double l = current.getLength() * current.getThickness();
+                    if (l > minFilLengthForBranch && rand.nextDouble() > getBranchP(dist)) {
+                        double x = current.getX();
+                        double y = current.getY();
                         double angle = current.getBranchAngle();
-                        filaments.add(new Filament(x, y, angle, branchRate));
+                        filaments.add(new Filament(x, y, angle));
                         current.resetLength();
-                        current.resetBranchOffset();
                         filCount++;
                         fCount++;
                     }
@@ -186,12 +174,12 @@ public class TailGrower {
         dialog.dispose();
     }
 
-    Filament createInitialFilament(Virus virus, ImageProcessor ip, double branchRate) {
+    Filament createInitialFilament(Virus virus, ImageProcessor ip) {
         double angle = Math.toRadians(getInitAngle(virus));
-        double r = rand.nextDouble() * branchRate / res + virus.getRadius();
+        double r = rand.nextDouble() * branchZoneWidth / res + virus.getRadius();
         double x0 = virus.getX() + r * Math.cos(angle);
         double y0 = virus.getY() - r * Math.sin(angle);
-        return new Filament(x0, y0, 360.0 * rand.nextDouble(), branchRate);
+        return new Filament(x0, y0, 360.0 * rand.nextDouble());
     }
 
     private double getInitAngle(Virus virus) {
@@ -221,15 +209,18 @@ public class TailGrower {
             peakPos += 180.0;
         }
         Gaussian gaussian = new Gaussian(0.0, pZoneDegrees);
-        double val = gaussian.value(pos - peakPos) / gaussian.value(0.0);
-        return val;
+        return gaussian.value(pos - peakPos) / gaussian.value(0.0);
+    }
+
+    private double getBranchP(double d) {
+        Gaussian gaussian = new Gaussian(0.0, branchZoneWidth);
+        return gaussian.value(d) / gaussian.value(0.0);
     }
 
     public boolean showDialog(String title) {
         boolean valid = false;
         while (!valid) {
             GenericDialog dialog = new GenericDialog(title, IJ.getInstance());
-            dialog.addNumericField("Branching Constant:", hgu, 0, 5, "");
             dialog.addNumericField("Maximum length:", maxSteps, 0, 5, "Pixels");
             dialog.addNumericField("Image width:", width, 0, 5, "");
             dialog.addNumericField("Image height:", height, 0, 5, "");
@@ -239,14 +230,13 @@ public class TailGrower {
             }
             dialog.showDialog();
             if (!dialog.wasCanceled()) {
-                hgu = (int) Math.round(dialog.getNextNumber());
                 maxSteps = (int) Math.round(dialog.getNextNumber());
                 width = (int) Math.round(dialog.getNextNumber());
                 height = (int) Math.round(dialog.getNextNumber());
                 showAllImages = dialog.getNextBoolean();
                 if (dialog.invalidNumber()) {
                     GenUtils.error("Entries must be numeric.");
-                } else if (width <= 0 || height <= 0 || hgu < 0) {
+                } else if (width <= 0 || height <= 0) {
                     GenUtils.error("Values must be greater than zero.");
                 } else {
                     valid = true;
