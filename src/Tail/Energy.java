@@ -14,14 +14,14 @@ public class Energy {
     private double xE;
     private double yE;
 
-    public Energy(double xF, double yF) {
-        this.xE = xF;
-        this.yE = yF;
+    public Energy(double xE, double yE) {
+        this.xE = xE;
+        this.yE = yE;
     }
 
-    public void addEnergy(Energy force) {
-        xE += force.getxE();
-        yE += force.getyE();
+    public void addEnergy(Energy energy) {
+        xE += energy.getxE();
+        yE += energy.getyE();
     }
 
     public double getxE() {
@@ -30,5 +30,9 @@ public class Energy {
 
     public double getyE() {
         return yE;
+    }
+
+    public double getMag() {
+        return Math.sqrt(Math.pow(xE, 2.0) + Math.pow(yE, 2.0));
     }
 }

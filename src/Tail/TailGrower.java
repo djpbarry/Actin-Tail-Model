@@ -36,7 +36,7 @@ public class TailGrower {
     private double res = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private double capFactor = 150.0;
     private int simultaneousFils = 20;
-    private double pZoneDegrees = 50.0;
+    private double pZoneDegrees = 5.0;
     private double minFilLengthForBranch = 50.0;
     private double branchZoneWidth = res;
     private double t = 1.0;
@@ -99,7 +99,6 @@ public class TailGrower {
         int virRadius = (int) Math.round(virus.getRadius() / res);
         for (int i = 0; i < maxSteps; i++) {
             virus.brownian();
-//            ip.setRoi((Roi) null);
             IJ.freeMemory();
             dialog.updateProgress(i, maxSteps);
             int f1 = filCount;
@@ -114,9 +113,10 @@ public class TailGrower {
                 }
                 double dist = Utils.calcDistance(current.getX(), current.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
-                if (dist > (rand.nextDouble() * branchZoneWidth * capFactor / res)
-                        * getGrowP(virus, current.getX(), current.getY())) {
-//                if (pGrow > (rand.nextDouble() * branchRate * capFactor / res)) {
+                Energy currentPE = current.calcPE(virus.getX(), virus.getY(), virus.getRadius());
+                if (dist > ((rand.nextDouble() * branchZoneWidth * capFactor / res)
+                        * getGrowP(virus, current.getX(), current.getY()))
+                        || currentPE.getMag() > Filament.MAX_FIL_PE) {
                     filaments.remove(j);
                     j--;
                     filCount--;
@@ -139,9 +139,7 @@ public class TailGrower {
                     }
                 }
             }
-//            virus.updateVelocity(netEnergy);
             virus.updateVelocity(netEnergy, t);
-//            ip.setRoi(new Rectangle(xlow, ylow, xhigh - xlow + 1, yhigh - ylow + 1));
             outputStream.println(i + "\t" + fCount + "\t" + totalLength);
             ImageProcessor filOut = ip.duplicate();
             ImageProcessor virOut = ip.duplicate();
