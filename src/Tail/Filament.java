@@ -14,7 +14,7 @@ public class Filament {
     boolean branchX = true;
     private double angle, branch = -70, thickness = 7;
     private double hookeFil = 10.0, hookeBond = 1.0;
-    public final static double MAX_FIL_PE = 50.0, MAX_BOND_PE = 5.0;
+    public final static double MAX_FIL_PE = 100.0, MAX_BOND_PE = 5.0;
 
     public Filament(double xc, double yc, double a0) {
         this.x = xc;

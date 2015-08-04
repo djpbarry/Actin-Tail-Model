@@ -60,7 +60,7 @@ public class Virus {
         } else {
             yVel -= t * calcDragForce(yVel) / mass;
         }
-        System.out.println("xVel: " + xVel + " yVel: " + yVel);
+//        System.out.println("xVel: " + xVel + " yVel: " + yVel);
         vels.add(new double[]{xVel, yVel});
         x += xVel * t;
         y += yVel * t;
@@ -101,4 +101,17 @@ public class Virus {
         }
         return new double[]{xVA / stepSize, yVA / stepSize};
     }
+
+    public double getMass() {
+        return mass;
+    }
+
+    public double getcD() {
+        return cD;
+    }
+
+    public double getBrownian() {
+        return brownian;
+    }
+    
 }
