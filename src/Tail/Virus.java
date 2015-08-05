@@ -14,13 +14,15 @@ import java.util.Random;
  */
 public class Virus {
 
-    private double x, y, xVel, yVel;
+    private double x, y, theta, xVel, yVel, wVel;
 //    private final double mass = 10e-15; // Mass of single vaccinia virion is ~10 fg - dx.doi.org/10.1016/j.snb.2005.08.047
     private final double mass = 100.0;
     private final double rho = 1.0;
     private final double radius = 150.0; // Width of virion is 250 - 350nm
     private final double area = Math.PI * radius * radius;
     private final double cD = 0.00005;
+    private final double mu = 0.5;
+    private final double inertia = mass * Math.pow(radius, 3.0) / 3;
     private Random r = new Random();
     private ArrayList<double[]> vels;
     private double brownian = 10.0;
@@ -30,16 +32,17 @@ public class Virus {
         this.y = y;
         xVel = 0.0;
         yVel = 0.0;
+        wVel = 0.0;
         vels = new ArrayList();
         vels.add(new double[]{xVel, yVel});
     }
 
     public void updateVelocity(Energy Es, double t) {
-        double xInc1 = 2.0 * Es.getxE() / mass;
+        double xInc = 2.0 * Es.getxE() / mass;
         if (Es.getxE() > 0.0) {
-            xVel += Math.sqrt(xInc1);
+            xVel += Math.sqrt(xInc);
         } else {
-            xVel += -Math.sqrt(-xInc1);
+            xVel += -Math.sqrt(-xInc);
         }
         double xDrag = t * calcDragForce(xVel) / mass;
         if (Math.abs(xDrag) > Math.abs(xVel)) {
@@ -47,12 +50,11 @@ public class Virus {
         } else {
             xVel -= t * calcDragForce(xVel) / mass;
         }
-
-        double yInc1 = 2.0 * Es.getyE() / mass;
+        double yInc = 2.0 * Es.getyE() / mass;
         if (Es.getyE() > 0.0) {
-            yVel += Math.sqrt(yInc1);
+            yVel += Math.sqrt(yInc);
         } else {
-            yVel += -Math.sqrt(-yInc1);
+            yVel += -Math.sqrt(-yInc);
         }
         double yDrag = t * calcDragForce(yVel) / mass;
         if (Math.abs(yDrag) > Math.abs(yVel)) {
@@ -60,15 +62,28 @@ public class Virus {
         } else {
             yVel -= t * calcDragForce(yVel) / mass;
         }
-//        System.out.println("xVel: " + xVel + " yVel: " + yVel);
+        double wInc = 2.0 * Es.getwE() / inertia;
+        if (Es.getwE() > 0.0) {
+            wVel += Math.sqrt(wInc);
+        } else {
+            wVel += -Math.sqrt(-wInc);
+        }
+        double wDrag = t * calcRotFricForce(wVel) / mass;
+        if (Math.abs(wDrag) > Math.abs(wVel)) {
+            wVel = 0.0;
+        } else {
+            wVel -= t * calcDragForce(wVel) / mass;
+        }
+//        System.out.println("xVel: " + xVel + " yVel: " + yVel + " wVel: " + wVel);
         vels.add(new double[]{xVel, yVel});
         x += xVel * t;
         y += yVel * t;
+        theta += wVel * t;
     }
 
     public void brownian() {
-        x += -brownian/2.0 + brownian * r.nextDouble();
-        y += -brownian/2.0 + brownian * r.nextDouble();
+        x += -brownian / 2.0 + brownian * r.nextDouble();
+        y += -brownian / 2.0 + brownian * r.nextDouble();
     }
 
     public double getX() {
@@ -79,12 +94,24 @@ public class Virus {
         return y;
     }
 
+    public double getTheta() {
+        return theta;
+    }
+
     public double getRadius() {
         return radius;
     }
 
     double calcDragForce(double vel) {
         double vInc = 0.5 * rho * area * cD * vel * vel;
+        if (vel < 0.0) {
+            vInc *= -1.0;
+        }
+        return vInc;
+    }
+
+    double calcRotFricForce(double vel) {
+        double vInc = mu * vel;
         if (vel < 0.0) {
             vInc *= -1.0;
         }
@@ -113,5 +140,5 @@ public class Virus {
     public double getBrownian() {
         return brownian;
     }
-    
+
 }

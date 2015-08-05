@@ -13,15 +13,18 @@ public class Energy {
 
     private double xE;
     private double yE;
+    private double rE;
 
-    public Energy(double xE, double yE) {
+    public Energy(double xE, double yE, double rE) {
         this.xE = xE;
         this.yE = yE;
+        this.rE = rE;
     }
 
     public void addEnergy(Energy energy) {
         xE += energy.getxE();
         yE += energy.getyE();
+        rE += energy.getwE();
     }
 
     public double getxE() {
@@ -30,6 +33,10 @@ public class Energy {
 
     public double getyE() {
         return yE;
+    }
+
+    public double getwE() {
+        return rE;
     }
 
     public double getMag() {

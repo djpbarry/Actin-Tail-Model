@@ -18,13 +18,9 @@ import org.apache.commons.math3.analysis.function.Gaussian;
 
 public class TailGrower {
 
-//    private FloatProcessor densityField, nutrientField;
     private final double FIL_NOISE = 20.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
-    public double areaCurve[];
-    private final Random R = new Random();
-    private static int maxSteps = 1000,
-            width = 1000, height = 1000;
+    private static int maxSteps = 1000, width = 1000, height = 1000;
     private final String TITLE = "";
     private static boolean showAllImages = true;
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
@@ -86,7 +82,7 @@ public class TailGrower {
             IJ.freeMemory();
             dialog.updateProgress(i, maxSteps);
             int f1 = filCount;
-            Energy netEnergy = new Energy(0.0, 0.0);
+            Energy netEnergy = new Energy(0.0, 0.0, 0.0);
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
                 if (current.grow(FIL_NOISE, virus)) {
@@ -96,7 +92,7 @@ public class TailGrower {
                 }
                 double dist = Utils.calcDistance(current.getX(), current.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
-                Energy currentPE = current.calcPE(virus.getX(), virus.getY(), virus.getRadius());
+                Energy currentPE = current.calcRPE(virus.getX(), virus.getY(), virus.getRadius());
                 if (dist > ((rand.nextDouble() * BRANCH_ZONE_WIDTH * CAP_FAC / RES)
                         * getGrowP(virus, current.getX(), current.getY()))
                         || currentPE.getMag() > Filament.MAX_FIL_PE) {
@@ -109,7 +105,7 @@ public class TailGrower {
                         filCount++;
                     }
                 } else {
-                    netEnergy.addEnergy(current.calcPE(virus.getX(), virus.getY(), virus.getRadius()));
+                    netEnergy.addEnergy(current.calcRPE(virus.getX(), virus.getY(), virus.getRadius()));
                     double l = current.getLength() * current.getThickness();
                     if (l > MIN_FIL_BRANCH_LEN && rand.nextDouble() > getBranchP(dist)) {
                         double x = current.getX();
@@ -127,9 +123,12 @@ public class TailGrower {
             virOut.setValue(255);
             virOut.fill();
             virOut.setValue(0);
-            virOut.fillOval((int) Math.round(virus.getX() / RES) - virRadius,
-                    (int) Math.round(virus.getY() / RES) - virRadius,
-                    2 * virRadius, 2 * virRadius);
+            virOut.drawOval((int) Math.round(virus.getX()/RES - virRadius),
+                    (int) Math.round(virus.getY()/RES - virRadius), 2 * virRadius, 2 * virRadius);
+            virOut.drawLine((int) Math.round(virus.getX()/RES + virRadius * Math.cos(virus.getTheta())),
+                    (int) Math.round(virus.getY()/RES + virRadius * Math.sin(virus.getTheta())),
+                    (int) Math.round(virus.getX()/RES - virRadius * Math.cos(virus.getTheta())),
+                    (int) Math.round(virus.getY()/RES - virRadius * Math.sin(virus.getTheta())));
 //            ByteProcessor growthZone = new ByteProcessor(ip.getWidth(), ip.getHeight());
 //            growthZone.setValue(0);
 //            growthZone.fill();

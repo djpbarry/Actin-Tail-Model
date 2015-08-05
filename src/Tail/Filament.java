@@ -44,18 +44,21 @@ public class Filament {
         return true;
     }
 
-    Energy calcPE(double xV, double yV, double r) {
+    Energy calcRPE(double xV, double yV, double r) {
         double d = Utils.calcDistance(x, y, xV, yV) - r;
-        double mag = 0.0;
+        double E = 0.0;
         if (d < 0.0) {
-            mag = 0.5 * hookeFil * Math.pow(d, 2.0);
+            E = 0.5 * hookeFil * Math.pow(d, 2.0);
         } else if (d > 0.0 && d < thickness) {
-            mag = -0.5 * hookeBond * Math.pow(d, 2.0);
+            E = -0.5 * hookeBond * Math.pow(d, 2.0);
         }
         double xD = xV - x;
         double yD = yV - y;
-        double theta = Math.toRadians(Utils.arcTan(xD, yD));
-        return new Energy(mag * Math.cos(theta), -mag * Math.sin(theta));
+        double theta = Utils.angleBetweenTwoLines(getDirection(), new double[]{xD, yD});
+        double Er = E * Math.sin(theta);
+        double Et = E * Math.cos(theta);
+        double phi = Math.toRadians(Utils.arcTan(xD, yD));
+        return new Energy(Er * Math.cos(phi), -Er * Math.sin(phi), Et);
     }
 
     public int getLength() {
@@ -77,6 +80,17 @@ public class Filament {
         return (branch + angle);
     }
 
+    public double[] getDirection() {
+        int s = xPix.size();
+        if (s > 1) {
+            double x = xPix.get(s - 1) - xPix.get(0);
+            double y = yPix.get(s - 1) - yPix.get(0);
+            return new double[]{x, y};
+        } else {
+            return new double[]{1.0, 0.0};
+        }
+    }
+
     public double getX() {
         return x;
     }
@@ -87,5 +101,5 @@ public class Filament {
 
     public double getThickness() {
         return thickness;
-    }    
+    }
 }
