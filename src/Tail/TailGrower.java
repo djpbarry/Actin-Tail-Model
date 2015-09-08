@@ -26,7 +26,7 @@ public class TailGrower {
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private final double CAP_FAC = 150.0;
     private final int N_FILS = 20;
-    private final double P_ZONE_DEG = 180.0;
+    private final double P_ZONE_DEG = 90.0;
     private final double MIN_FIL_BRANCH_LEN = 50.0;
     private final double BRANCH_ZONE_WIDTH = RES;
     private final double T = 1.0;
@@ -123,12 +123,12 @@ public class TailGrower {
             virOut.setValue(255);
             virOut.fill();
             virOut.setValue(0);
-            virOut.drawOval((int) Math.round(virus.getX()/RES - virRadius),
-                    (int) Math.round(virus.getY()/RES - virRadius), 2 * virRadius, 2 * virRadius);
-            virOut.drawLine((int) Math.round(virus.getX()/RES + virRadius * Math.cos(virus.getTheta())),
-                    (int) Math.round(virus.getY()/RES + virRadius * Math.sin(virus.getTheta())),
-                    (int) Math.round(virus.getX()/RES - virRadius * Math.cos(virus.getTheta())),
-                    (int) Math.round(virus.getY()/RES - virRadius * Math.sin(virus.getTheta())));
+            virOut.drawOval((int) Math.round(virus.getX() / RES - virRadius),
+                    (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
+            virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(virus.getTheta())),
+                    (int) Math.round(virus.getY() / RES + virRadius * Math.sin(virus.getTheta())),
+                    (int) Math.round(virus.getX() / RES - virRadius * Math.cos(virus.getTheta())),
+                    (int) Math.round(virus.getY() / RES - virRadius * Math.sin(virus.getTheta())));
 //            ByteProcessor growthZone = new ByteProcessor(ip.getWidth(), ip.getHeight());
 //            growthZone.setValue(0);
 //            growthZone.fill();

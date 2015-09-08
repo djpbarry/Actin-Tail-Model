@@ -19,8 +19,10 @@ public class Filament {
     public Filament(double xc, double yc, double a0) {
         this.x = xc;
         this.y = yc;
+        xPix.add(x);
+        yPix.add(y);
         this.angle = a0;
-        this.length = 0;
+        this.length = 1;
         if (rand.nextBoolean()) {
             branch *= -1;
         }
@@ -31,8 +33,6 @@ public class Filament {
         if (clearance < rand.nextDouble() * thickness) {
             return false;
         }
-        xPix.add(x);
-        yPix.add(y);
         angle += noise * rand.nextGaussian();
 
         double xVec = thickness * Math.cos(Math.toRadians(angle));
@@ -40,23 +40,34 @@ public class Filament {
 
         x += xVec;
         y += yVec;
+        xPix.add(x);
+        yPix.add(y);
         length++;
         return true;
     }
 
     Energy calcRPE(double xV, double yV, double r) {
         double d = Utils.calcDistance(x, y, xV, yV) - r;
-        double E = 0.0;
+        double E;
         if (d < 0.0) {
             E = 0.5 * hookeFil * Math.pow(d, 2.0);
         } else if (d > 0.0 && d < thickness) {
             E = -0.5 * hookeBond * Math.pow(d, 2.0);
+        } else {
+            return new Energy(0.0, 0.0, 0.0);
         }
         double xD = xV - x;
         double yD = yV - y;
-        double theta = Utils.angleBetweenTwoLines(getDirection(), new double[]{xD, yD});
+        double gamma = Math.toRadians(Utils.arcTan(-xD, -yD));
+        double dir[] = {thickness * Math.cos(Math.toRadians(angle)), -thickness * Math.sin(Math.toRadians(angle))};
+        double yFt2 = (x - xV) * Math.sin(gamma) + (y - yV) * Math.cos(gamma) + yV;
+        double yFt1 = (x - dir[0] - xV) * Math.sin(gamma) + (y - dir[0] - yV) * Math.cos(gamma) + yV;
+        double theta = Math.PI / 2.0 - Utils.angleBetweenTwoLines(new double[]{Math.cos(angle), -Math.sin(angle)}, new double[]{xD, yD});
         double Er = E * Math.sin(theta);
         double Et = E * Math.cos(theta);
+        if (yFt2 > yFt1) {
+            Et *= -1.0;
+        }
         double phi = Math.toRadians(Utils.arcTan(xD, yD));
         return new Energy(Er * Math.cos(phi), -Er * Math.sin(phi), Et);
     }
@@ -77,18 +88,13 @@ public class Filament {
 
     public double getBranchAngle() {
         branch += -2 * branch;
-        return (branch + angle);
-    }
-
-    public double[] getDirection() {
-        int s = xPix.size();
-        if (s > 1) {
-            double x = xPix.get(s - 1) - xPix.get(0);
-            double y = yPix.get(s - 1) - yPix.get(0);
-            return new double[]{x, y};
-        } else {
-            return new double[]{1.0, 0.0};
+        double a = branch + angle;
+        if (a < 0.0) {
+            a += 360.0;
+        } else if (a >= 360.0) {
+            a -= 360.0;
         }
+        return a;
     }
 
     public double getX() {
