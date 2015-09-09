@@ -80,23 +80,13 @@ public class Virus {
         vels.add(new double[]{xVel, yVel});
         x += xVel * t;
         y += yVel * t;
-        theta += Math.toDegrees(wVel * t);
-        if (theta < 0.0) {
-            theta += 360.0;
-        } else if (theta >= 360.0) {
-            theta -= 360;
-        }
+        updateTheta(Math.toDegrees(wVel * t));
     }
 
     public void brownian() {
         x += -brownian / 2.0 + brownian * r.nextDouble();
         y += -brownian / 2.0 + brownian * r.nextDouble();
-        theta += -brownian / 2.0 + brownian * r.nextDouble();
-        if (theta < 0.0) {
-            theta += 360.0;
-        } else if (theta >= 360.0) {
-            theta -= 360;
-        }
+        updateTheta(-brownian / 2.0 + brownian * r.nextDouble());
     }
 
     public double getX() {
@@ -150,4 +140,12 @@ public class Virus {
         return brownian;
     }
 
+    void updateTheta(double inc) {
+        theta += inc;
+        if (theta < 0.0) {
+            theta += 360.0;
+        } else if (theta >= 360.0) {
+            theta -= 360;
+        }
+    }
 }
