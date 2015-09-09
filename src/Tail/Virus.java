@@ -21,11 +21,12 @@ public class Virus {
     private final double radius = 150.0; // Width of virion is 250 - 350nm
     private final double area = Math.PI * radius * radius;
     private final double cD = 0.00005;
-    private final double mu = 0.5;
+    private final double mu = 10.0;
     private final double inertia = mass * Math.pow(radius, 3.0) / 3;
     private Random r = new Random();
     private ArrayList<double[]> vels;
     private double brownian = 10.0;
+    private final int STEP_SIZE = 100;
 
     public Virus(double x, double y) {
         this.x = x;
@@ -35,6 +36,7 @@ public class Virus {
         wVel = 0.0;
         vels = new ArrayList();
         vels.add(new double[]{xVel, yVel});
+        theta = r.nextDouble() * 360.0;
     }
 
     public void updateVelocity(Energy Es, double t) {
@@ -62,28 +64,39 @@ public class Virus {
         } else {
             yVel -= t * calcDragForce(yVel) / mass;
         }
-        double wInc = 2.0 * Es.getwE() / inertia;
+        double wInc;
         if (Es.getwE() > 0.0) {
-            wVel += Math.sqrt(wInc);
+            wInc = Math.sqrt(2.0 * Es.getwE() / inertia);
         } else {
-            wVel += -Math.sqrt(-wInc);
+            wInc = -Math.sqrt(-2.0 * Es.getwE() / inertia);
         }
+        wVel += wInc;
         double wDrag = t * calcRotFricForce(wVel) / mass;
         if (Math.abs(wDrag) > Math.abs(wVel)) {
             wVel = 0.0;
         } else {
-            wVel -= t * calcDragForce(wVel) / mass;
+            wVel -= wDrag;
         }
-//        System.out.println("xVel: " + xVel + " yVel: " + yVel + " wVel: " + wVel);
         vels.add(new double[]{xVel, yVel});
         x += xVel * t;
         y += yVel * t;
-        theta += wVel * t;
+        theta += Math.toDegrees(wVel * t);
+        if (theta < 0.0) {
+            theta += 360.0;
+        } else if (theta >= 360.0) {
+            theta -= 360;
+        }
     }
 
     public void brownian() {
         x += -brownian / 2.0 + brownian * r.nextDouble();
         y += -brownian / 2.0 + brownian * r.nextDouble();
+        theta += -brownian / 2.0 + brownian * r.nextDouble();
+        if (theta < 0.0) {
+            theta += 360.0;
+        } else if (theta >= 360.0) {
+            theta -= 360;
+        }
     }
 
     public double getX() {
@@ -111,22 +124,18 @@ public class Virus {
     }
 
     double calcRotFricForce(double vel) {
-        double vInc = mu * vel;
-        if (vel < 0.0) {
-            vInc *= -1.0;
-        }
-        return vInc;
+        return mu * vel;
     }
 
-    public double[] getVelAv(int stepSize) {
+    public double[] getVelAv() {
         double xVA = 0.0;
         double yVA = 0.0;
         int s = vels.size();
-        for (int i = 0; i < stepSize && i < s; i++) {
+        for (int i = 0; i < STEP_SIZE && i < s; i++) {
             xVA += vels.get(s - i - 1)[0];
             yVA += vels.get(s - i - 1)[1];
         }
-        return new double[]{xVA / stepSize, yVA / stepSize};
+        return new double[]{xVA / STEP_SIZE, yVA / STEP_SIZE};
     }
 
     public double getMass() {

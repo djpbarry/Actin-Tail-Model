@@ -20,13 +20,13 @@ public class TailGrower {
 
     private final double FIL_NOISE = 20.0;
     public File imageFolder = new File("c:/users/barry05/desktop");
-    private static int maxSteps = 1000, width = 1000, height = 1000;
+    private static int maxSteps = 2000, width = 1000, height = 1000;
     private final String TITLE = "";
     private static boolean showAllImages = true;
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private final double CAP_FAC = 150.0;
     private final int N_FILS = 20;
-    private final double P_ZONE_DEG = 90.0;
+    private final double P_ZONE_DEG = 45.0;
     private final double MIN_FIL_BRANCH_LEN = 50.0;
     private final double BRANCH_ZONE_WIDTH = RES;
     private final double T = 1.0;
@@ -123,22 +123,23 @@ public class TailGrower {
             virOut.setValue(255);
             virOut.fill();
             virOut.setValue(0);
+            double theta = Math.toRadians(virus.getTheta());
             virOut.drawOval((int) Math.round(virus.getX() / RES - virRadius),
                     (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
-            virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(virus.getTheta())),
-                    (int) Math.round(virus.getY() / RES + virRadius * Math.sin(virus.getTheta())),
-                    (int) Math.round(virus.getX() / RES - virRadius * Math.cos(virus.getTheta())),
-                    (int) Math.round(virus.getY() / RES - virRadius * Math.sin(virus.getTheta())));
+            virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(theta)),
+                    (int) Math.round(virus.getY() / RES - virRadius * Math.sin(theta)),
+                    (int) Math.round(virus.getX() / RES - virRadius * Math.cos(theta)),
+                    (int) Math.round(virus.getY() / RES + virRadius * Math.sin(theta)));
 //            ByteProcessor growthZone = new ByteProcessor(ip.getWidth(), ip.getHeight());
 //            growthZone.setValue(0);
 //            growthZone.fill();
 //            double x0 = virus.getX();
 //            double y0 = virus.getY();
 //            double r = 2.0 * virus.getRadius();
-//            for (double j = y0 - r; j <= y0 + r; j += res) {
-//                for (double k = x0 - r; k <= x0 + r; k += res) {
-//                    growthZone.putPixelValue((int) Math.round(k / res),
-//                            (int) Math.round(j / res), (int) Math.round(255.0 * getGrowP(virus, k, j)));
+//            for (double j = y0 - r; j <= y0 + r; j += RES) {
+//                for (double k = x0 - r; k <= x0 + r; k += RES) {
+//                    growthZone.putPixelValue((int) Math.round(k / RES),
+//                            (int) Math.round(j / RES), (int) Math.round(255.0 * getGrowP(virus, k, j)));
 //                }
 //            }
             if (showAllImages) {
@@ -160,7 +161,7 @@ public class TailGrower {
     }
 
     private double getInitAngle(Virus virus) {
-        double avVel[] = virus.getVelAv(100);
+        double avVel[] = virus.getVelAv();
         double angle = Utils.arcTan(avVel[0], avVel[1]) - 180.0 + P_ZONE_DEG * rand.nextGaussian();
         if (angle < 0.0) {
             angle += 360.0;
@@ -169,24 +170,17 @@ public class TailGrower {
     }
 
     private double getGrowP(Virus virus, double x, double y) {
-        double avVel[] = virus.getVelAv(100);
-        double peakPos = Utils.arcTan(avVel[0], avVel[1]) + 180.0;
-        if (peakPos > 360.0) {
-            peakPos -= 360.0;
-        }
+        double peakPos = virus.getTheta();
         double pos = Utils.arcTan(x - virus.getX(), y - virus.getY());
-        if (pos > 360.0) {
-            pos -= 360.0;
+        double diff = pos - peakPos;
+        if (diff < 0.0) {
+            diff += 360.0;
         }
-        if (pos >= 0.0 && pos < 90.0 && peakPos >= 270.0) {
-            peakPos -= 180.0;
-            pos += 180.0;
-        } else if (peakPos >= 0.0 && peakPos < 90.0 && pos >= 270.0) {
-            pos -= 180.0;
-            peakPos += 180.0;
+        if (diff > 180.0) {
+            diff = 360.0 - diff;
         }
         Gaussian gaussian = new Gaussian(0.0, P_ZONE_DEG);
-        return gaussian.value(pos - peakPos) / gaussian.value(0.0);
+        return gaussian.value(diff) / gaussian.value(0.0);
     }
 
     private double getBranchP(double d) {
