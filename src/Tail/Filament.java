@@ -14,7 +14,7 @@ public class Filament {
     boolean branchX = true;
     private double angle, branch = -70, thickness = 7;
     private double hookeFil = 10.0, hookeBond = 1.0;
-    public final static double MAX_FIL_PE = 100.0, MAX_BOND_PE = 5.0;
+    public final static double MAX_FIL_PE = 1000.0, MAX_BOND_PE = 5.0;
 
     public Filament(double xc, double yc, double a0) {
         this.x = xc;
@@ -28,9 +28,11 @@ public class Filament {
         }
     }
 
-    public boolean grow(double noise, Virus virus) {
-        double clearance = Utils.calcDistance(x, y, virus.getX(), virus.getY()) - virus.getRadius();
-        if (clearance < rand.nextDouble() * thickness) {
+    public boolean grow(double noise, Virus virus, ArrayList<Filament> filaments, int index) {
+        double minClearance = rand.nextDouble() * thickness;
+        double virClearance = Utils.calcDistance(x, y, virus.getX(), virus.getY()) - virus.getRadius();
+        double filClearance = getMinFilClearance(filaments, index);
+        if (virClearance < minClearance || filClearance < minClearance) {
             return false;
         }
         angle += noise * rand.nextGaussian();
@@ -44,6 +46,18 @@ public class Filament {
         yPix.add(y);
         length++;
         return true;
+    }
+
+    double getMinFilClearance(ArrayList<Filament> filaments, int index) {
+        double minDist = Double.MAX_VALUE;
+        for (int i = 0; i < index; i++) {
+            Filament current = filaments.get(i);
+            double dist = Utils.calcDistance(this.x, this.y, current.getX(), current.getY());
+            if (dist < minDist) {
+                minDist = dist;
+            }
+        }
+        return minDist;
     }
 
     Energy calcRPE(double xV, double yV, double r) {
