@@ -7,6 +7,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.process.ByteProcessor;
+import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import java.awt.Color;
 import java.io.File;
@@ -24,14 +25,16 @@ public class TailGrower {
 
     private final double FIL_NOISE = 5.0;
     public File imageFolder, parentFolder = new File("c:/users/barry05/desktop/Sim_Actin_Tails");
-    private static int maxSteps = 1000, width = 1000, height = 1000;
+    private static int maxSteps = 2000, width = 2000, height = 2000;
     private final String TITLE = "";
-    private static boolean showAllImages = true;
+    private static boolean showAllImages = false;
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private final double CAP_FAC = 150.0;
     private final int N_FILS = 20;
+    private final int NPFS = 20;
+    private final double SIGMA = RES / 2.0;
 //    private final double P_ZONE_DEG;
-    private final int P_ZONE_STEP = 5, P_ZONE_MAX = 180;
+    private final int P_ZONE_STEP = 5, P_ZONE_MAX = 135;
     private final double MIN_FIL_BRANCH_LEN = 50.0;
     private final double BRANCH_ZONE_WIDTH = RES;
     private final double T = 1.0;
@@ -60,23 +63,25 @@ public class TailGrower {
         double vels[][] = new double[P_ZONE_MAX / P_ZONE_STEP + 1][maxSteps];
         File velFile;
         PrintWriter velstream;
-        parentFolder = new File(GenUtils.openResultsDirectory(parentFolder.getAbsolutePath(), "/"));
+        parentFolder = new File(GenUtils.openResultsDirectory(parentFolder.getAbsolutePath()
+                + DELIM + ((new Date()).toString()).replace(':', '-'), "/"));
         try {
             velFile = new File(parentFolder + "/velocities.csv");
             velstream = new PrintWriter(new FileOutputStream(velFile));
-            velstream.println("FIL_NOISE," + FIL_NOISE + ",RES," + RES + ",CAP_FAC,"
-                    + CAP_FAC + ",N_FILS," + N_FILS + ",MIN_FIL_BRANCH_LEN,"
-                    + MIN_FIL_BRANCH_LEN + ",BRANCH_ZONE_WIDTH," + BRANCH_ZONE_WIDTH);
+
         } catch (FileNotFoundException e) {
             System.out.println(e.toString());
             return;
         }
+        velstream.println("FIL_NOISE," + FIL_NOISE + ",RES," + RES + ",CAP_FAC,"
+                + CAP_FAC + ",N_FILS," + N_FILS + ",MIN_FIL_BRANCH_LEN,"
+                + MIN_FIL_BRANCH_LEN + ",BRANCH_ZONE_WIDTH," + BRANCH_ZONE_WIDTH);
         for (int pzone = P_ZONE_STEP; pzone <= P_ZONE_MAX; pzone += P_ZONE_STEP) {
             ByteProcessor bp = new ByteProcessor(width, height);
             bp.setColor(Color.white);
             bp.fill();
             grow(bp, maxSteps, vels[pzone / P_ZONE_STEP - 1], pzone);
-             velstream.print(pzone + ",");
+            velstream.print(pzone + ",");
         }
         velstream.println();
         for (int i = 0; i < maxSteps; i++) {
@@ -92,17 +97,14 @@ public class TailGrower {
     }
 
     public void grow(ByteProcessor ip, int maxSteps, double[] vels, double pZone) {
-        Date d = new Date();
-        String date = d.toString();
-        date = date.replace(':', '-');
         DecimalFormat numFormat = new DecimalFormat("000");
         ip.setValue(0);
         ArrayList<Filament> filaments = new ArrayList();
-        double x0 = RES * ip.getWidth() / 2.0, y0 = RES * ip.getHeight() / 2.0;
+        double xv0 = RES * ip.getWidth() / 2.0, yv0 = RES * ip.getHeight() / 2.0;
         double dists[] = new double[maxSteps];
 //        ArrayList<Color> colours = new ArrayList();
 //        double vels[] = new double[maxSteps];
-        Virus virus = new Virus(x0, y0);
+        Virus virus = new Virus(xv0, yv0);
         for (int i = 0; i < N_FILS; i++) {
             filaments.add(createInitialFilament(virus, ip, pZone));
 //            colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
@@ -112,27 +114,33 @@ public class TailGrower {
 //                "Choose_Location_for_Output", true)).getAbsolutePath()
 //                + DELIM + "Sim_Actin_Tails" + DELIM + "Output", "\\"));
         imageFolder = new File(GenUtils.openResultsDirectory(parentFolder.getAbsolutePath()
-                + DELIM + date + DELIM + pZone, "\\"));
-        File traj;
-        PrintWriter trajStream;
+                + DELIM + pZone, "\\"));
+        File traj, animData;
+        PrintWriter trajStream, animStream;
         try {
             traj = new File(imageFolder + "/trajectory.csv");
             trajStream = new PrintWriter(new FileOutputStream(traj));
-            trajStream.println("FIL_NOISE," + FIL_NOISE + ",RES," + RES + ",CAP_FAC,"
-                    + CAP_FAC + ",N_FILS," + N_FILS + ",P_ZONE_DEG," + pZone + ",MIN_FIL_BRANCH_LEN,"
-                    + MIN_FIL_BRANCH_LEN + ",BRANCH_ZONE_WIDTH," + BRANCH_ZONE_WIDTH + ",VIRUS_BROWNIAN," + virus.getBrownian()
-                    + ",VIRUS_MASS," + virus.getMass() + ",VIRUS_CD," + virus.getcD());
-            trajStream.println("t,x,y,xVel,yVel");
+            animData = new File(imageFolder + "/anim_data.txt");
+            animStream = new PrintWriter(new FileOutputStream(animData));
         } catch (FileNotFoundException e) {
             System.out.println(e.toString());
             return;
         }
+        trajStream.println("FIL_NOISE," + FIL_NOISE + ",RES," + RES + ",CAP_FAC,"
+                + CAP_FAC + ",N_FILS," + N_FILS + ",P_ZONE_DEG," + pZone + ",MIN_FIL_BRANCH_LEN,"
+                + MIN_FIL_BRANCH_LEN + ",BRANCH_ZONE_WIDTH," + BRANCH_ZONE_WIDTH + ",VIRUS_BROWNIAN," + virus.getBrownian()
+                + ",VIRUS_MASS," + virus.getMass() + ",VIRUS_CD," + virus.getcD());
+        trajStream.println("t,x,y,xVel,yVel");
+        animStream.println("FRAMES " + maxSteps);
+        animStream.println("WIDTH " + ip.getWidth());
+        animStream.println("HEIGHT " + ip.getHeight());
         ProgressDialog dialog = new ProgressDialog(null, "Growing...", false, TITLE, false);
         dialog.setVisible(true);
         int virRadius = (int) Math.round(virus.getRadius() / RES);
         for (int i = 0; i < maxSteps; i++) {
             trajStream.println(i + "," + virus.getX() + "," + virus.getY() + "," + virus.getxVel() + "," + virus.getyVel());
             virus.brownian();
+            animStream.print(virus.getX() + " " + virus.getY() + " ");
             IJ.freeMemory();
             dialog.updateProgress(i, maxSteps);
             int f1 = filCount;
@@ -143,12 +151,13 @@ public class TailGrower {
                     int x = (int) Math.round(current.getX() / RES);
                     int y = (int) Math.round(current.getY() / RES);
                     ip.drawPixel(x, y);
+                    animStream.print(current.getX() + " " + current.getY() + " ");
                 }
                 double dist = Utils.calcDistance(current.getX(), current.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
                 Energy currentPE = current.calcRPE(virus.getX(), virus.getY(), virus.getRadius());
                 if (dist > ((rand.nextDouble() * BRANCH_ZONE_WIDTH * CAP_FAC / RES)
-                        * getGrowP(virus, current.getX(), current.getY(), pZone))
+                        * getGrowP(virus, current.getX(), current.getY(), pZone, SIGMA, NPFS))
                         || currentPE.getMag() > Filament.MAX_FIL_PE) {
                     filaments.remove(j);
 //                    colours.remove(j);
@@ -176,44 +185,46 @@ public class TailGrower {
                 }
             }
             virus.updateVelocity(netEnergy, T);
-            ImageProcessor filOut = ip.duplicate();
-            ImageProcessor virOut = ip.duplicate();
-            virOut.setValue(255);
-            virOut.fill();
-            virOut.setValue(0);
+            if (showAllImages) {
+                ImageProcessor filOut = ip.duplicate();
+                ImageProcessor virOut = ip.duplicate();
+                virOut.setValue(255);
+                virOut.fill();
+                virOut.setValue(0);
 //            double theta = Math.toRadians(virus.getTheta());
-            virOut.fillOval((int) Math.round(virus.getX() / RES - virRadius),
-                    (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
+                virOut.fillOval((int) Math.round(virus.getX() / RES - virRadius),
+                        (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
 //            virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(theta)),
 //                    (int) Math.round(virus.getY() / RES - virRadius * Math.sin(theta)),
 //                    (int) Math.round(virus.getX() / RES - virRadius * Math.cos(theta)),
 //                    (int) Math.round(virus.getY() / RES + virRadius * Math.sin(theta)));
-//            ByteProcessor growthZone = new ByteProcessor(ip.getWidth(), ip.getHeight());
-//            growthZone.setValue(0);
-//            growthZone.fill();
-//            double x0 = virus.getX();
-//            double y0 = virus.getY();
-//            double r = 2.0 * virus.getRadius();
-//            for (double j = y0 - r; j <= y0 + r; j += RES) {
-//                for (double k = x0 - r; k <= x0 + r; k += RES) {
-//                    growthZone.putPixelValue((int) Math.round(k / RES),
-//                            (int) Math.round(j / RES), (int) Math.round(255.0 * getGrowP(virus, k, j)));
-//                }
-//            }
-            if (showAllImages) {
+                FloatProcessor growthZone = new FloatProcessor(ip.getWidth(), ip.getHeight());
+                growthZone.setValue(0);
+                growthZone.fill();
+                double x0 = virus.getX();
+                double y0 = virus.getY();
+                double r = 2.0 * virus.getRadius();
+                for (double j = y0 - r; j <= y0 + r; j += RES) {
+                    for (double k = x0 - r; k <= x0 + r; k += RES) {
+                        growthZone.putPixelValue((int) Math.round(k / RES),
+                                (int) Math.round(j / RES), getGrowP(virus, k, j, pZone, SIGMA, NPFS));
+                    }
+                }
                 IJ.saveAs(new ImagePlus("", filOut), "PNG", imageFolder + "\\Filaments_Step" + numFormat.format(i));
                 IJ.saveAs(new ImagePlus("", virOut), "PNG", imageFolder + "\\Virus_Step" + numFormat.format(i));
-//                IJ.saveAs(new ImagePlus("", growthZone), "PNG", imageFolder + "\\GrowthZone_Step" + numFormat.format(i));
+                IJ.saveAs(new ImagePlus("", growthZone), "tif", imageFolder + "\\GrowthZone_Step" + numFormat.format(i));
             }
             vels[i] = Math.sqrt(Math.pow(virus.getxVel(), 2.0) + Math.pow(virus.getyVel(), 2.0));
             dists[i] = vels[i] * T;
+            animStream.println();
         }
         trajStream.close();
+        animStream.close();
         IJ.saveAs(new ImagePlus("", ip), "PNG", imageFolder + "\\Result");
         dialog.dispose();
         Sum sum = new Sum();
         System.out.println(pZone + ","
-                + (Utils.calcDistance(x0, y0, virus.getX(), virus.getY()) / sum.evaluate(dists, 0, maxSteps)));
+                + (Utils.calcDistance(xv0, yv0, virus.getX(), virus.getY()) / sum.evaluate(dists, 0, maxSteps)));
 //        printStats(vels);
     }
 
@@ -234,7 +245,7 @@ public class TailGrower {
         return angle;
     }
 
-    private double getGrowP(Virus virus, double x, double y, double pZone) {
+    private double getGrowP(Virus virus, double x, double y, double pZone, double sigma, int sites) {
         double peakPos = virus.getTheta();
         double pos = Utils.arcTan(x - virus.getX(), y - virus.getY());
         double diff = pos - peakPos;
@@ -244,8 +255,19 @@ public class TailGrower {
         if (diff > 180.0) {
             diff = 360.0 - diff;
         }
-        Gaussian gaussian = new Gaussian(0.0, pZone);
-        return gaussian.value(diff) / gaussian.value(0.0);
+//        Gaussian gaussian = new Gaussian(0.0, pZone);
+        return getNPFP(diff, sigma, pZone, sites) / getNPFP(0.0, sigma, pZone, sites);
+    }
+
+    double getNPFP(double x, double sigma, double pZone, int sites) {
+        int S = (sites - 1) / 2;
+        double thetaStep = pZone / S;
+        double sum = 0.0;
+        for (int i = 0; i <= S; i++) {
+            double thisX = 0.0 + i * thetaStep;
+            sum += (new Gaussian(thisX, sigma)).value(x);
+        }
+        return sum;
     }
 
     private double getBranchP(double d) {
