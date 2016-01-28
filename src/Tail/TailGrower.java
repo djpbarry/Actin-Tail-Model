@@ -147,17 +147,18 @@ public class TailGrower {
             Energy netEnergy = new Energy(0.0, 0.0, 0.0);
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
+                Monomer end = current.getMons().getLast();
                 if (current.grow(FIL_NOISE, virus, filaments, j)) {
-                    int x = (int) Math.round(current.getX() / RES);
-                    int y = (int) Math.round(current.getY() / RES);
+                    int x = (int) Math.round(end.getX() / RES);
+                    int y = (int) Math.round(end.getY() / RES);
                     ip.drawPixel(x, y);
-                    animStream.print(current.getX() + " " + current.getY() + " ");
+                    animStream.print(end.getX() + " " + end.getY() + " ");
                 }
-                double dist = Utils.calcDistance(current.getX(), current.getY(),
+                double dist = Utils.calcDistance(end.getX(), end.getY(),
                         virus.getX(), virus.getY()) - virus.getRadius();
                 Energy currentPE = current.calcRPE(virus.getX(), virus.getY(), virus.getRadius());
                 if (dist > ((rand.nextDouble() * BRANCH_ZONE_WIDTH * CAP_FAC / RES)
-                        * getGrowP(virus, current.getX(), current.getY(), pZone, SIGMA, NPFS))
+                        * getGrowP(virus, end.getX(), end.getY(), pZone, SIGMA, NPFS))
                         || currentPE.getMag() > Filament.MAX_FIL_PE) {
                     filaments.remove(j);
 //                    colours.remove(j);
@@ -174,8 +175,8 @@ public class TailGrower {
                     netEnergy.addEnergy(current.calcRPE(virus.getX(), virus.getY(), virus.getRadius()));
                     double l = current.getLength() * current.getThickness();
                     if (l > MIN_FIL_BRANCH_LEN && rand.nextDouble() > getBranchP(dist)) {
-                        double x = current.getX();
-                        double y = current.getY();
+                        double x = end.getX();
+                        double y = end.getY();
                         double angle = current.getBranchAngle();
                         filaments.add(new Filament(x, y, angle));
 //                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));

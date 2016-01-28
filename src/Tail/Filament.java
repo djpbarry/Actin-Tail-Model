@@ -2,25 +2,21 @@ package Tail;
 
 import IAClasses.Utils;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Random;
 
 public class Filament {
 
-    private double x, y;
     int length;
-    ArrayList<Double> xPix = new ArrayList();
-    ArrayList<Double> yPix = new ArrayList();
+    LinkedList<Monomer> mons = new LinkedList();
     Random rand = new Random();
     boolean branchX = true;
-    private double angle, branch = -70, thickness = 7;
+    private double angle, branch = -70;
     private double hookeFil = 10.0, hookeBond = 1.0;
     public final static double MAX_FIL_PE = 1000.0, MAX_BOND_PE = 5.0;
 
     public Filament(double xc, double yc, double a0) {
-        this.x = xc;
-        this.y = yc;
-        xPix.add(x);
-        yPix.add(y);
+        mons.add(new Monomer(xc, yc));
         this.angle = a0;
         this.length = 1;
         if (rand.nextBoolean()) {
@@ -29,7 +25,10 @@ public class Filament {
     }
 
     public boolean grow(double noise, Virus virus, ArrayList<Filament> filaments, int index) {
-        double minClearance = rand.nextDouble() * thickness;
+        Monomer m = mons.getLast();
+        double x = m.getX();
+        double y = m.getY();
+        double minClearance = rand.nextDouble() * Monomer.DIAMETER;
         double virClearance = Utils.calcDistance(x, y, virus.getX(), virus.getY()) - virus.getRadius();
         double filClearance = getMinFilClearance(filaments, index);
         if (virClearance < minClearance || filClearance < minClearance) {
@@ -37,13 +36,9 @@ public class Filament {
         }
         angle += noise * rand.nextGaussian();
 
-        double xVec = thickness * Math.cos(Math.toRadians(angle));
-        double yVec = -thickness * Math.sin(Math.toRadians(angle));
-
-        x += xVec;
-        y += yVec;
-        xPix.add(x);
-        yPix.add(y);
+        double xVec = Monomer.DIAMETER * Math.cos(Math.toRadians(angle));
+        double yVec = -Monomer.DIAMETER * Math.sin(Math.toRadians(angle));
+        mons.add(new Monomer(x + xVec, y + yVec));
         length++;
         return true;
     }
@@ -52,7 +47,9 @@ public class Filament {
         double minDist = Double.MAX_VALUE;
         for (int i = 0; i < index; i++) {
             Filament current = filaments.get(i);
-            double dist = Utils.calcDistance(this.x, this.y, current.getX(), current.getY());
+            Monomer m1 = mons.getLast();
+            Monomer m2 = current.getMons().getLast();
+            double dist = Utils.calcDistance(m2.getX(), m2.getY(), m1.getX(), m2.getY());
             if (dist < minDist) {
                 minDist = dist;
             }
@@ -61,11 +58,14 @@ public class Filament {
     }
 
     Energy calcRPE(double xV, double yV, double r) {
+        Monomer m = mons.getLast();
+        double x = m.getX();
+        double y = m.getY();
         double d = Utils.calcDistance(x, y, xV, yV) - r;
         double E;
         if (d < 0.0) {
             E = 0.5 * hookeFil * Math.pow(d, 2.0);
-        } else if (d > 0.0 && d < thickness) {
+        } else if (d > 0.0 && d < Monomer.DIAMETER) {
             E = -0.5 * hookeBond * Math.pow(d, 2.0);
         } else {
             return new Energy(0.0, 0.0, 0.0);
@@ -73,7 +73,7 @@ public class Filament {
         double xD = xV - x;
         double yD = yV - y;
         double gamma = Math.toRadians(Utils.arcTan(-xD, -yD));
-        double dir[] = {thickness * Math.cos(Math.toRadians(angle)), -thickness * Math.sin(Math.toRadians(angle))};
+        double dir[] = {Monomer.DIAMETER * Math.cos(Math.toRadians(angle)), -Monomer.DIAMETER * Math.sin(Math.toRadians(angle))};
         double yFt2 = (x - xV) * Math.sin(gamma) + (y - yV) * Math.cos(gamma) + yV;
         double yFt1 = (x - dir[0] - xV) * Math.sin(gamma) + (y - dir[0] - yV) * Math.cos(gamma) + yV;
         double theta = Math.PI / 2.0 - Utils.angleBetweenTwoLines(new double[]{Math.cos(angle), -Math.sin(angle)}, new double[]{xD, yD});
@@ -91,12 +91,9 @@ public class Filament {
     }
 
     public void resetLength() {
-        Double tempX = (xPix.get(length - 1));
-        Double tempY = (yPix.get(length - 1));
-        xPix.clear();
-        yPix.clear();
-        xPix.add(tempX);
-        yPix.add(tempY);
+        Monomer temp = (mons.get(length - 1));
+        mons.clear();
+        mons.add(temp);
         length = 1;
     }
 
@@ -111,15 +108,11 @@ public class Filament {
         return a;
     }
 
-    public double getX() {
-        return x;
-    }
-
-    public double getY() {
-        return y;
+    public LinkedList<Monomer> getMons() {
+        return mons;
     }
 
     public double getThickness() {
-        return thickness;
+        return Monomer.DIAMETER;
     }
 }
