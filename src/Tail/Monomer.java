@@ -16,18 +16,28 @@
  */
 package Tail;
 
+import java.util.Random;
+
 /**
  *
  * @author David Barry <david.barry at crick.ac.uk>
  */
 public class Monomer {
 
-    private double x, y;
+    public static final int ADP = 0, ATPPI = 1, ATP = 2;
+    private final double x, y;
     public static final double DIAMETER = 7;
+    private int state;
+    private int startTime;
+    private final int stateChangeCoeff = 1000;
+    private final Random r;
 
-    public Monomer(double x, double y) {
+    public Monomer(double x, double y, int startTime) {
         this.x = x;
         this.y = y;
+        this.state = Monomer.ADP;
+        this.startTime = startTime;
+        this.r = new Random();
     }
 
     public double getX() {
@@ -37,5 +47,17 @@ public class Monomer {
     public double getY() {
         return y;
     }
-    
+
+    void changeState(int time) {
+        int age = time - startTime;
+        if (age > r.nextInt(stateChangeCoeff)) {
+            state++;
+        }
+        this.startTime = 0;
+    }
+
+    public int getState() {
+        return state;
+    }
+
 }

@@ -106,7 +106,7 @@ public class TailGrower {
 //        double vels[] = new double[maxSteps];
         Virus virus = new Virus(xv0, yv0);
         for (int i = 0; i < N_FILS; i++) {
-            filaments.add(createInitialFilament(virus, ip, pZone));
+            filaments.add(createInitialFilament(virus, ip, pZone, i));
 //            colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         }
         int filCount = 1;
@@ -148,7 +148,7 @@ public class TailGrower {
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
                 Monomer end = current.getMons().getLast();
-                if (current.grow(FIL_NOISE, virus, filaments, j)) {
+                if (current.grow(FIL_NOISE, virus, filaments, j, i)) {
                     int x = (int) Math.round(end.getX() / RES);
                     int y = (int) Math.round(end.getY() / RES);
                     ip.drawPixel(x, y);
@@ -167,7 +167,7 @@ public class TailGrower {
                     f1--;
                     if (filCount < N_FILS) {
                         //TODO
-                        filaments.add(createInitialFilament(virus, ip, pZone));
+                        filaments.add(createInitialFilament(virus, ip, pZone, i));
 //                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
                         filCount++;
                     }
@@ -178,7 +178,7 @@ public class TailGrower {
                         double x = end.getX();
                         double y = end.getY();
                         double angle = current.getBranchAngle();
-                        filaments.add(new Filament(x, y, angle));
+                        filaments.add(new Filament(x, y, angle, i));
 //                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
                         current.resetLength();
                         filCount++;
@@ -229,12 +229,12 @@ public class TailGrower {
 //        printStats(vels);
     }
 
-    Filament createInitialFilament(Virus virus, ImageProcessor ip, double pZone) {
+    Filament createInitialFilament(Virus virus, ImageProcessor ip, double pZone, int time) {
         double angle = Math.toRadians(getInitAngle(virus, pZone));
         double r = rand.nextDouble() * BRANCH_ZONE_WIDTH / RES + virus.getRadius();
         double x0 = virus.getX() + r * Math.cos(angle);
         double y0 = virus.getY() - r * Math.sin(angle);
-        return new Filament(x0, y0, 360.0 * rand.nextDouble());
+        return new Filament(x0, y0, 360.0 * rand.nextDouble(), time);
     }
 
     private double getInitAngle(Virus virus, double P_ZONE_DEG) {

@@ -7,24 +7,22 @@ import java.util.Random;
 
 public class Filament {
 
-    int length;
     LinkedList<Monomer> mons = new LinkedList();
     Random rand = new Random();
     boolean branchX = true;
     private double angle, branch = -70;
-    private double hookeFil = 10.0, hookeBond = 1.0;
+    private final double HOOKE_FIL = 10.0, HOOKE_BOND = 1.0;
     public final static double MAX_FIL_PE = 1000.0, MAX_BOND_PE = 5.0;
 
-    public Filament(double xc, double yc, double a0) {
-        mons.add(new Monomer(xc, yc));
+    public Filament(double xc, double yc, double a0, int time) {
+        mons.add(new Monomer(xc, yc, time));
         this.angle = a0;
-        this.length = 1;
         if (rand.nextBoolean()) {
             branch *= -1;
         }
     }
 
-    public boolean grow(double noise, Virus virus, ArrayList<Filament> filaments, int index) {
+    public boolean grow(double noise, Virus virus, ArrayList<Filament> filaments, int index, int time) {
         Monomer m = mons.getLast();
         double x = m.getX();
         double y = m.getY();
@@ -38,8 +36,7 @@ public class Filament {
 
         double xVec = Monomer.DIAMETER * Math.cos(Math.toRadians(angle));
         double yVec = -Monomer.DIAMETER * Math.sin(Math.toRadians(angle));
-        mons.add(new Monomer(x + xVec, y + yVec));
-        length++;
+        mons.add(new Monomer(x + xVec, y + yVec, time));
         return true;
     }
 
@@ -64,9 +61,9 @@ public class Filament {
         double d = Utils.calcDistance(x, y, xV, yV) - r;
         double E;
         if (d < 0.0) {
-            E = 0.5 * hookeFil * Math.pow(d, 2.0);
+            E = 0.5 * HOOKE_FIL * Math.pow(d, 2.0);
         } else if (d > 0.0 && d < Monomer.DIAMETER) {
-            E = -0.5 * hookeBond * Math.pow(d, 2.0);
+            E = -0.5 * HOOKE_BOND * Math.pow(d, 2.0);
         } else {
             return new Energy(0.0, 0.0, 0.0);
         }
@@ -87,14 +84,13 @@ public class Filament {
     }
 
     public int getLength() {
-        return length;
+        return mons.size();
     }
 
     public void resetLength() {
-        Monomer temp = (mons.get(length - 1));
+        Monomer temp = mons.getLast();
         mons.clear();
         mons.add(temp);
-        length = 1;
     }
 
     public double getBranchAngle() {
@@ -114,5 +110,16 @@ public class Filament {
 
     public double getThickness() {
         return Monomer.DIAMETER;
+    }
+
+    public void updateMonomerStates(int time) {
+        LinkedList<Monomer> temp = (LinkedList<Monomer>) mons.clone();
+        for (Monomer m : mons) {
+            m.changeState(time);
+            if (m.getState() < Monomer.ATP) {
+                temp.add(m);
+            }
+        }
+        mons = temp;
     }
 }
