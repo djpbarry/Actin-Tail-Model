@@ -7,6 +7,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.process.ByteProcessor;
+import ij.process.ColorProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import java.awt.Color;
@@ -17,6 +18,7 @@ import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.Random;
 import org.apache.commons.math3.analysis.function.Gaussian;
 import org.apache.commons.math3.stat.descriptive.summary.Sum;
@@ -25,16 +27,16 @@ public class TailGrower {
 
     private final double FIL_NOISE = 5.0;
     public File imageFolder, parentFolder = new File("c:/users/barry05/desktop/Sim_Actin_Tails");
-    private static int maxSteps = 2000, width = 2000, height = 2000;
+    private static int maxSteps = 2000, width = 1000, height = 1000;
     private final String TITLE = "";
-    private static boolean showAllImages = false;
+    private static boolean showAllImages = true;
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private final double CAP_FAC = 150.0;
     private final int N_FILS = 20;
     private final int NPFS = 20;
     private final double SIGMA = RES / 2.0;
 //    private final double P_ZONE_DEG;
-    private final int P_ZONE_STEP = 5, P_ZONE_MAX = 135;
+    private final int P_ZONE_STEP = 45, P_ZONE_MAX = 45;
     private final double MIN_FIL_BRANCH_LEN = 50.0;
     private final double BRANCH_ZONE_WIDTH = RES;
     private final double T = 1.0;
@@ -77,7 +79,7 @@ public class TailGrower {
                 + CAP_FAC + ",N_FILS," + N_FILS + ",MIN_FIL_BRANCH_LEN,"
                 + MIN_FIL_BRANCH_LEN + ",BRANCH_ZONE_WIDTH," + BRANCH_ZONE_WIDTH);
         for (int pzone = P_ZONE_STEP; pzone <= P_ZONE_MAX; pzone += P_ZONE_STEP) {
-            ByteProcessor bp = new ByteProcessor(width, height);
+            ColorProcessor bp = new ColorProcessor(width, height);
             bp.setColor(Color.white);
             bp.fill();
             grow(bp, maxSteps, vels[pzone / P_ZONE_STEP - 1], pzone);
@@ -96,9 +98,12 @@ public class TailGrower {
     public TailGrower() {
     }
 
-    public void grow(ByteProcessor ip, int maxSteps, double[] vels, double pZone) {
+    public void grow(ColorProcessor ip, int maxSteps, double[] vels, double pZone) {
+        ByteProcessor result = new ByteProcessor(ip.getWidth(), ip.getHeight());
+        result.setColor(Color.white);
+        result.fill();
+        result.setColor(Color.black);
         DecimalFormat numFormat = new DecimalFormat("000");
-        ip.setValue(0);
         ArrayList<Filament> filaments = new ArrayList();
         double xv0 = RES * ip.getWidth() / 2.0, yv0 = RES * ip.getHeight() / 2.0;
         double dists[] = new double[maxSteps];
@@ -106,10 +111,9 @@ public class TailGrower {
 //        double vels[] = new double[maxSteps];
         Virus virus = new Virus(xv0, yv0);
         for (int i = 0; i < N_FILS; i++) {
-            filaments.add(createInitialFilament(virus, ip, pZone, i));
+            filaments.add(createInitialFilament(virus, pZone, i));
 //            colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         }
-        int filCount = 1;
 //        imageFolder = new File(GenUtils.openResultsDirectory((Utilities.getFolder(imageFolder,
 //                "Choose_Location_for_Output", true)).getAbsolutePath()
 //                + DELIM + "Sim_Actin_Tails" + DELIM + "Output", "\\"));
@@ -138,82 +142,99 @@ public class TailGrower {
         dialog.setVisible(true);
         int virRadius = (int) Math.round(virus.getRadius() / RES);
         for (int i = 0; i < maxSteps; i++) {
+            ip = new ColorProcessor(ip.getWidth(), ip.getHeight());
+            ip.setColor(Color.white);
+            ip.fill();
             trajStream.println(i + "," + virus.getX() + "," + virus.getY() + "," + virus.getxVel() + "," + virus.getyVel());
             virus.brownian();
             animStream.print(virus.getX() + " " + virus.getY() + " ");
             IJ.freeMemory();
             dialog.updateProgress(i, maxSteps);
-            int f1 = filCount;
+            int f1 = filaments.size();
             Energy netEnergy = new Energy(0.0, 0.0, 0.0);
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
-                Monomer end = current.getMons().getLast();
-                if (current.grow(FIL_NOISE, virus, filaments, j, i)) {
-                    int x = (int) Math.round(end.getX() / RES);
-                    int y = (int) Math.round(end.getY() / RES);
-                    ip.drawPixel(x, y);
-                    animStream.print(end.getX() + " " + end.getY() + " ");
+                if (!current.isCapped()) {
+                    Monomer end = current.getMons().getLast();
+                    if (current.grow(FIL_NOISE, virus, filaments, j, i)) {
+                        end = current.getMons().getLast();
+                        animStream.print(end.getX() + " " + end.getY() + " ");
+                    }
+                    double dist = Utils.calcDistance(end.getX(), end.getY(),
+                            virus.getX(), virus.getY()) - virus.getRadius();
+                    Energy currentPE = current.calcRPE(virus.getX(), virus.getY(), virus.getRadius());
+                    if (dist > ((rand.nextDouble() * BRANCH_ZONE_WIDTH * CAP_FAC / RES)
+                            * getGrowP(virus, end.getX(), end.getY(), pZone, SIGMA, NPFS))
+                            || currentPE.getMag() > Filament.MAX_FIL_PE) {
+                        current.setCapped(true);
+                    } else {
+                        netEnergy.addEnergy(current.calcRPE(virus.getX(), virus.getY(), virus.getRadius()));
+                        double l = current.getLength() * current.getThickness();
+                        if (l > MIN_FIL_BRANCH_LEN && rand.nextDouble() > getBranchP(dist)) {
+                            double x = end.getX();
+                            double y = end.getY();
+                            double angle = current.getBranchAngle();
+                            filaments.add(new Filament(x, y, angle, i));
+//                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
+                            current.resetLength();
+                        }
+                    }
                 }
-                double dist = Utils.calcDistance(end.getX(), end.getY(),
-                        virus.getX(), virus.getY()) - virus.getRadius();
-                Energy currentPE = current.calcRPE(virus.getX(), virus.getY(), virus.getRadius());
-                if (dist > ((rand.nextDouble() * BRANCH_ZONE_WIDTH * CAP_FAC / RES)
-                        * getGrowP(virus, end.getX(), end.getY(), pZone, SIGMA, NPFS))
-                        || currentPE.getMag() > Filament.MAX_FIL_PE) {
+                current.updateMonomerStates(i);
+                if (current.getLength() < 1) {
                     filaments.remove(j);
 //                    colours.remove(j);
                     j--;
-                    filCount--;
                     f1--;
-                    if (filCount < N_FILS) {
-                        //TODO
-                        filaments.add(createInitialFilament(virus, ip, pZone, i));
+                }
+                if (filaments.size() < N_FILS) {
+                    //TODO
+                    filaments.add(createInitialFilament(virus, pZone, i));
 //                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-                        filCount++;
+                }
+                LinkedList<Monomer> mons = current.getMons();
+                for (Monomer m : mons) {
+                    int x = (int) Math.round(m.getX() / RES);
+                    int y = (int) Math.round(m.getY() / RES);
+                    if (m.getState() < Monomer.ATP) {
+                        ip.setColor(Color.yellow);
+                        if (m.getState() < Monomer.ATPPI) {
+                            ip.setColor(Color.red);
+                        }
+                        ip.drawPixel(x, y);
                     }
-                } else {
-                    netEnergy.addEnergy(current.calcRPE(virus.getX(), virus.getY(), virus.getRadius()));
-                    double l = current.getLength() * current.getThickness();
-                    if (l > MIN_FIL_BRANCH_LEN && rand.nextDouble() > getBranchP(dist)) {
-                        double x = end.getX();
-                        double y = end.getY();
-                        double angle = current.getBranchAngle();
-                        filaments.add(new Filament(x, y, angle, i));
-//                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-                        current.resetLength();
-                        filCount++;
-                    }
+                    result.drawPixel(x, y);
                 }
             }
             virus.updateVelocity(netEnergy, T);
             if (showAllImages) {
-                ImageProcessor filOut = ip.duplicate();
-                ImageProcessor virOut = ip.duplicate();
-                virOut.setValue(255);
-                virOut.fill();
-                virOut.setValue(0);
+//                ImageProcessor filOut = ip.duplicate();
+//                ImageProcessor virOut = ip.duplicate();
+//                virOut.setValue(255);
+//                virOut.fill();
+//                virOut.setValue(0);
 //            double theta = Math.toRadians(virus.getTheta());
-                virOut.fillOval((int) Math.round(virus.getX() / RES - virRadius),
-                        (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
+//                virOut.fillOval((int) Math.round(virus.getX() / RES - virRadius),
+//                        (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
 //            virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(theta)),
 //                    (int) Math.round(virus.getY() / RES - virRadius * Math.sin(theta)),
 //                    (int) Math.round(virus.getX() / RES - virRadius * Math.cos(theta)),
 //                    (int) Math.round(virus.getY() / RES + virRadius * Math.sin(theta)));
-                FloatProcessor growthZone = new FloatProcessor(ip.getWidth(), ip.getHeight());
-                growthZone.setValue(0);
-                growthZone.fill();
-                double x0 = virus.getX();
-                double y0 = virus.getY();
-                double r = 2.0 * virus.getRadius();
-                for (double j = y0 - r; j <= y0 + r; j += RES) {
-                    for (double k = x0 - r; k <= x0 + r; k += RES) {
-                        growthZone.putPixelValue((int) Math.round(k / RES),
-                                (int) Math.round(j / RES), getGrowP(virus, k, j, pZone, SIGMA, NPFS));
-                    }
-                }
-                IJ.saveAs(new ImagePlus("", filOut), "PNG", imageFolder + "\\Filaments_Step" + numFormat.format(i));
-                IJ.saveAs(new ImagePlus("", virOut), "PNG", imageFolder + "\\Virus_Step" + numFormat.format(i));
-                IJ.saveAs(new ImagePlus("", growthZone), "tif", imageFolder + "\\GrowthZone_Step" + numFormat.format(i));
+//                FloatProcessor growthZone = new FloatProcessor(ip.getWidth(), ip.getHeight());
+//                growthZone.setValue(0);
+//                growthZone.fill();
+//                double x0 = virus.getX();
+//                double y0 = virus.getY();
+//                double r = 2.0 * virus.getRadius();
+//                for (double j = y0 - r; j <= y0 + r; j += RES) {
+//                    for (double k = x0 - r; k <= x0 + r; k += RES) {
+//                        growthZone.putPixelValue((int) Math.round(k / RES),
+//                                (int) Math.round(j / RES), getGrowP(virus, k, j, pZone, SIGMA, NPFS));
+//                    }
+//                }
+                IJ.saveAs(new ImagePlus("", ip.duplicate()), "PNG", imageFolder + "\\Filaments_Step" + numFormat.format(i));
+//                IJ.saveAs(new ImagePlus("", virOut), "PNG", imageFolder + "\\Virus_Step" + numFormat.format(i));
+//                IJ.saveAs(new ImagePlus("", growthZone), "tif", imageFolder + "\\GrowthZone_Step" + numFormat.format(i));
             }
             vels[i] = Math.sqrt(Math.pow(virus.getxVel(), 2.0) + Math.pow(virus.getyVel(), 2.0));
             dists[i] = vels[i] * T;
@@ -221,7 +242,7 @@ public class TailGrower {
         }
         trajStream.close();
         animStream.close();
-        IJ.saveAs(new ImagePlus("", ip), "PNG", imageFolder + "\\Result");
+        IJ.saveAs(new ImagePlus("", result), "PNG", imageFolder + "\\Result");
         dialog.dispose();
         Sum sum = new Sum();
         System.out.println(pZone + ","
@@ -229,7 +250,7 @@ public class TailGrower {
 //        printStats(vels);
     }
 
-    Filament createInitialFilament(Virus virus, ImageProcessor ip, double pZone, int time) {
+    Filament createInitialFilament(Virus virus, double pZone, int time) {
         double angle = Math.toRadians(getInitAngle(virus, pZone));
         double r = rand.nextDouble() * BRANCH_ZONE_WIDTH / RES + virus.getRadius();
         double x0 = virus.getX() + r * Math.cos(angle);

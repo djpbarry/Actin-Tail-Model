@@ -9,7 +9,7 @@ public class Filament {
 
     LinkedList<Monomer> mons = new LinkedList();
     Random rand = new Random();
-    boolean branchX = true;
+    private boolean capped;
     private double angle, branch = -70;
     private final double HOOKE_FIL = 10.0, HOOKE_BOND = 1.0;
     public final static double MAX_FIL_PE = 1000.0, MAX_BOND_PE = 5.0;
@@ -17,6 +17,7 @@ public class Filament {
     public Filament(double xc, double yc, double a0, int time) {
         mons.add(new Monomer(xc, yc, time));
         this.angle = a0;
+        this.capped = false;
         if (rand.nextBoolean()) {
             branch *= -1;
         }
@@ -46,7 +47,7 @@ public class Filament {
             Filament current = filaments.get(i);
             Monomer m1 = mons.getLast();
             Monomer m2 = current.getMons().getLast();
-            double dist = Utils.calcDistance(m2.getX(), m2.getY(), m1.getX(), m2.getY());
+            double dist = Utils.calcDistance(m2.getX(), m2.getY(), m1.getX(), m1.getY());
             if (dist < minDist) {
                 minDist = dist;
             }
@@ -113,7 +114,7 @@ public class Filament {
     }
 
     public void updateMonomerStates(int time) {
-        LinkedList<Monomer> temp = (LinkedList<Monomer>) mons.clone();
+        LinkedList<Monomer> temp = new LinkedList();
         for (Monomer m : mons) {
             m.changeState(time);
             if (m.getState() < Monomer.ATP) {
@@ -122,4 +123,13 @@ public class Filament {
         }
         mons = temp;
     }
+
+    public boolean isCapped() {
+        return capped;
+    }
+
+    public void setCapped(boolean capped) {
+        this.capped = capped;
+    }
+
 }

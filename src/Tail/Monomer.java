@@ -29,7 +29,7 @@ public class Monomer {
     public static final double DIAMETER = 7;
     private int state;
     private int startTime;
-    private final int stateChangeCoeff = 1000;
+    private final int stateChangeCoeff = 50000;
     private final Random r;
 
     public Monomer(double x, double y, int startTime) {
