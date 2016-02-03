@@ -16,12 +16,12 @@ public class Virus {
 
     private double x, y, theta, xVel, yVel, wVel;
 //    private final double mass = 10e-15; // Mass of single vaccinia virion is ~10 fg - dx.doi.org/10.1016/j.snb.2005.08.047
-    private final double mass = 100.0;
-    private final double rho = 1.0;
+    private final double mass = 0.4;
+    private final double rho = 1.0/150.0;
     private final double radius = 150.0; // Width of virion is 250 - 350nm
     private final double area = Math.PI * radius * radius;
     private final double cD = 0.0001;
-    private final double mu = 20.0;
+    private final double mu = 40.0;
     private final double inertia = mass * Math.pow(radius, 3.0) / 3;
     private Random r = new Random();
     private ArrayList<double[]> vels;

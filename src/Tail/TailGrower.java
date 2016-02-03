@@ -8,8 +8,6 @@ import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.process.ByteProcessor;
 import ij.process.ColorProcessor;
-import ij.process.FloatProcessor;
-import ij.process.ImageProcessor;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,19 +25,19 @@ public class TailGrower {
 
     private final double FIL_NOISE = 5.0;
     public File imageFolder, parentFolder = new File("c:/users/barry05/desktop/Sim_Actin_Tails");
-    private static int maxSteps = 2000, width = 1000, height = 1000;
+    private static int maxSteps = 4000, width = 2000, height = 2000;
     private final String TITLE = "";
     private static boolean showAllImages = true;
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private final double CAP_FAC = 150.0;
-    private final int N_FILS = 20;
+    private final int N_FILS = 160;
     private final int NPFS = 20;
     private final double SIGMA = RES / 2.0;
 //    private final double P_ZONE_DEG;
     private final int P_ZONE_STEP = 45, P_ZONE_MAX = 45;
     private final double MIN_FIL_BRANCH_LEN = 50.0;
     private final double BRANCH_ZONE_WIDTH = RES;
-    private final double T = 1.0;
+    private final double T = 1.0 / 250.0;
     Random rand = new Random();
     private final char DELIM = '/';
 
@@ -111,7 +109,7 @@ public class TailGrower {
 //        double vels[] = new double[maxSteps];
         Virus virus = new Virus(xv0, yv0);
         for (int i = 0; i < N_FILS; i++) {
-            filaments.add(createInitialFilament(virus, pZone, i));
+            filaments.add(createInitialFilament(virus, pZone, 0));
 //            colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         }
 //        imageFolder = new File(GenUtils.openResultsDirectory((Utilities.getFolder(imageFolder,
@@ -174,36 +172,39 @@ public class TailGrower {
                             double x = end.getX();
                             double y = end.getY();
                             double angle = current.getBranchAngle();
-                            filaments.add(new Filament(x, y, angle, i));
+                            filaments.add(new Filament(x, y, angle, i, T));
 //                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
                             current.resetLength();
                         }
                     }
                 }
                 current.updateMonomerStates(i);
-                if (current.getLength() < 1) {
+                LinkedList<Monomer> mons = current.getMons();
+                if (mons.size() < 1) {
                     filaments.remove(j);
 //                    colours.remove(j);
                     j--;
                     f1--;
+                } else {
+//                    ip.setColor(labels.get(j));
+                    for (Monomer m : mons) {
+                        int x = (int) Math.round(m.getX() / RES);
+                        int y = (int) Math.round(m.getY() / RES);
+                        if (m.getState() == Monomer.ADP) {
+                            ip.setColor(Color.blue);
+                        } else if (m.getState() == Monomer.ATPPI) {
+                            ip.setColor(Color.green);
+                        } else {
+                            ip.setColor(Color.red);
+                        }
+                        ip.drawPixel(x, y);
+                        result.drawPixel(x, y);
+                    }
                 }
                 if (filaments.size() < N_FILS) {
                     //TODO
                     filaments.add(createInitialFilament(virus, pZone, i));
-//                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-                }
-                LinkedList<Monomer> mons = current.getMons();
-                for (Monomer m : mons) {
-                    int x = (int) Math.round(m.getX() / RES);
-                    int y = (int) Math.round(m.getY() / RES);
-                    if (m.getState() < Monomer.ATP) {
-                        ip.setColor(Color.yellow);
-                        if (m.getState() < Monomer.ATPPI) {
-                            ip.setColor(Color.red);
-                        }
-                        ip.drawPixel(x, y);
-                    }
-                    result.drawPixel(x, y);
+//                    colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
                 }
             }
             virus.updateVelocity(netEnergy, T);
@@ -255,7 +256,7 @@ public class TailGrower {
         double r = rand.nextDouble() * BRANCH_ZONE_WIDTH / RES + virus.getRadius();
         double x0 = virus.getX() + r * Math.cos(angle);
         double y0 = virus.getY() - r * Math.sin(angle);
-        return new Filament(x0, y0, 360.0 * rand.nextDouble(), time);
+        return new Filament(x0, y0, 360.0 * rand.nextDouble(), time, T);
     }
 
     private double getInitAngle(Virus virus, double P_ZONE_DEG) {

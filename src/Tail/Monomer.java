@@ -29,14 +29,16 @@ public class Monomer {
     public static final double DIAMETER = 7;
     private int state;
     private int startTime;
-    private final int stateChangeCoeff = 50000;
+    private final double stateChangeCoeff = -0.33;
     private final Random r;
+    private final double timeRes;
 
-    public Monomer(double x, double y, int startTime) {
+    public Monomer(double x, double y, int startTime, double timeRes) {
         this.x = x;
         this.y = y;
         this.state = Monomer.ADP;
         this.startTime = startTime;
+        this.timeRes=timeRes;
         this.r = new Random();
     }
 
@@ -49,11 +51,19 @@ public class Monomer {
     }
 
     void changeState(int time) {
-        int age = time - startTime;
-        if (age > r.nextInt(stateChangeCoeff)) {
+        double age = (time - startTime) * timeRes;
+        if (stateCalc(age)) {
             state++;
+            this.startTime = time;
         }
-        this.startTime = 0;
+    }
+
+    public boolean dissociate(double time) {
+        return stateCalc(time);
+    }
+
+    boolean stateCalc(double x) {
+        return 1.0 - Math.exp(x * stateChangeCoeff) > r.nextDouble();
     }
 
     public int getState() {

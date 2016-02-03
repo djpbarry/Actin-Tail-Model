@@ -13,14 +13,23 @@ public class Filament {
     private double angle, branch = -70;
     private final double HOOKE_FIL = 10.0, HOOKE_BOND = 1.0;
     public final static double MAX_FIL_PE = 1000.0, MAX_BOND_PE = 5.0;
+    private int length, timeSinceDissociation;
+    private final double timeRes;
 
-    public Filament(double xc, double yc, double a0, int time) {
-        mons.add(new Monomer(xc, yc, time));
+    public Filament(double xc, double yc, double a0, int time, double timeRes) {
+        addMonomer(xc, yc, time);
         this.angle = a0;
         this.capped = false;
+        this.timeRes=timeRes;
         if (rand.nextBoolean()) {
             branch *= -1;
         }
+        timeSinceDissociation = time;
+    }
+
+    final void addMonomer(double x, double y, int time) {
+        mons.add(new Monomer(x, y, time, timeRes));
+        length++;
     }
 
     public boolean grow(double noise, Virus virus, ArrayList<Filament> filaments, int index, int time) {
@@ -37,7 +46,7 @@ public class Filament {
 
         double xVec = Monomer.DIAMETER * Math.cos(Math.toRadians(angle));
         double yVec = -Monomer.DIAMETER * Math.sin(Math.toRadians(angle));
-        mons.add(new Monomer(x + xVec, y + yVec, time));
+        addMonomer(x + xVec, y + yVec, time);
         return true;
     }
 
@@ -85,13 +94,11 @@ public class Filament {
     }
 
     public int getLength() {
-        return mons.size();
+        return length;
     }
 
     public void resetLength() {
-        Monomer temp = mons.getLast();
-        mons.clear();
-        mons.add(temp);
+        length = 1;
     }
 
     public double getBranchAngle() {
@@ -114,14 +121,15 @@ public class Filament {
     }
 
     public void updateMonomerStates(int time) {
-        LinkedList<Monomer> temp = new LinkedList();
         for (Monomer m : mons) {
             m.changeState(time);
-            if (m.getState() < Monomer.ATP) {
-                temp.add(m);
-            }
         }
-        mons = temp;
+        Monomer first = mons.getFirst();
+        if (first.getState() >= Monomer.ATP
+                && first.dissociate((time - timeSinceDissociation) / 250.0)) {
+            mons.remove(0);
+            timeSinceDissociation = time;
+        }
     }
 
     public boolean isCapped() {
