@@ -25,16 +25,16 @@ public class TailGrower {
 
     private final double FIL_NOISE = 5.0;
     public File imageFolder, parentFolder = new File("c:/users/barry05/desktop/Sim_Actin_Tails");
-    private static int maxSteps = 4000, width = 2000, height = 2000;
+    private static int maxSteps = 4000, width = 1000, height = 1000;
     private final String TITLE = "";
     private static boolean showAllImages = true;
     private final double RES = 7; // One pixel equals 7 nm, approximate width of actin filament - http://www.ncbi.nlm.nih.gov/books/NBK9908/
     private final double CAP_FAC = 150.0;
-    private final int N_FILS = 160;
+    private final int N_FILS = 20;
     private final int NPFS = 20;
     private final double SIGMA = RES / 2.0;
 //    private final double P_ZONE_DEG;
-    private final int P_ZONE_STEP = 45, P_ZONE_MAX = 45;
+    private final int P_ZONE_STEP = 5, P_ZONE_MAX = 130;
     private final double MIN_FIL_BRANCH_LEN = 50.0;
     private final double BRANCH_ZONE_WIDTH = RES;
     private final double T = 1.0 / 250.0;
@@ -140,6 +140,7 @@ public class TailGrower {
         dialog.setVisible(true);
         int virRadius = (int) Math.round(virus.getRadius() / RES);
         for (int i = 0; i < maxSteps; i++) {
+            int uncapped = 0;
             ip = new ColorProcessor(ip.getWidth(), ip.getHeight());
             ip.setColor(Color.white);
             ip.fill();
@@ -153,6 +154,7 @@ public class TailGrower {
             for (int j = 0; j < f1; j++) {
                 Filament current = filaments.get(j);
                 if (!current.isCapped()) {
+                    uncapped++;
                     Monomer end = current.getMons().getLast();
                     if (current.grow(FIL_NOISE, virus, filaments, j, i)) {
                         end = current.getMons().getLast();
@@ -173,6 +175,7 @@ public class TailGrower {
                             double y = end.getY();
                             double angle = current.getBranchAngle();
                             filaments.add(new Filament(x, y, angle, i, T));
+                            uncapped++;
 //                        colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
                             current.resetLength();
                         }
@@ -201,26 +204,21 @@ public class TailGrower {
                         result.drawPixel(x, y);
                     }
                 }
-                if (filaments.size() < N_FILS) {
-                    //TODO
-                    filaments.add(createInitialFilament(virus, pZone, i));
-//                    colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-                }
             }
             virus.updateVelocity(netEnergy, T);
             if (showAllImages) {
 //                ImageProcessor filOut = ip.duplicate();
-//                ImageProcessor virOut = ip.duplicate();
-//                virOut.setValue(255);
-//                virOut.fill();
-//                virOut.setValue(0);
-//            double theta = Math.toRadians(virus.getTheta());
-//                virOut.fillOval((int) Math.round(virus.getX() / RES - virRadius),
-//                        (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
-//            virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(theta)),
-//                    (int) Math.round(virus.getY() / RES - virRadius * Math.sin(theta)),
-//                    (int) Math.round(virus.getX() / RES - virRadius * Math.cos(theta)),
-//                    (int) Math.round(virus.getY() / RES + virRadius * Math.sin(theta)));
+                ByteProcessor virOut = new ByteProcessor(ip.getWidth(), ip.getHeight());
+                virOut.setValue(255);
+                virOut.fill();
+                virOut.setValue(0);
+                double theta = Math.toRadians(virus.getTheta());
+                virOut.drawOval((int) Math.round(virus.getX() / RES - virRadius),
+                        (int) Math.round(virus.getY() / RES - virRadius), 2 * virRadius, 2 * virRadius);
+                virOut.drawLine((int) Math.round(virus.getX() / RES + virRadius * Math.cos(theta)),
+                        (int) Math.round(virus.getY() / RES - virRadius * Math.sin(theta)),
+                        (int) Math.round(virus.getX() / RES - virRadius * Math.cos(theta)),
+                        (int) Math.round(virus.getY() / RES + virRadius * Math.sin(theta)));
 //                FloatProcessor growthZone = new FloatProcessor(ip.getWidth(), ip.getHeight());
 //                growthZone.setValue(0);
 //                growthZone.fill();
@@ -234,12 +232,17 @@ public class TailGrower {
 //                    }
 //                }
                 IJ.saveAs(new ImagePlus("", ip.duplicate()), "PNG", imageFolder + "\\Filaments_Step" + numFormat.format(i));
-//                IJ.saveAs(new ImagePlus("", virOut), "PNG", imageFolder + "\\Virus_Step" + numFormat.format(i));
+                IJ.saveAs(new ImagePlus("", virOut), "PNG", imageFolder + "\\Virus_Step" + numFormat.format(i));
 //                IJ.saveAs(new ImagePlus("", growthZone), "tif", imageFolder + "\\GrowthZone_Step" + numFormat.format(i));
             }
             vels[i] = Math.sqrt(Math.pow(virus.getxVel(), 2.0) + Math.pow(virus.getyVel(), 2.0));
             dists[i] = vels[i] * T;
             animStream.println();
+            if (uncapped < N_FILS) {
+                //TODO
+                filaments.add(createInitialFilament(virus, pZone, i));
+//                    colours.add(new Color(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
+            }
         }
         trajStream.close();
         animStream.close();

@@ -38,7 +38,7 @@ public class Monomer {
         this.y = y;
         this.state = Monomer.ADP;
         this.startTime = startTime;
-        this.timeRes=timeRes;
+        this.timeRes = timeRes;
         this.r = new Random();
     }
 

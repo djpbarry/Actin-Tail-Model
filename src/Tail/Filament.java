@@ -17,14 +17,14 @@ public class Filament {
     private final double timeRes;
 
     public Filament(double xc, double yc, double a0, int time, double timeRes) {
-        addMonomer(xc, yc, time);
         this.angle = a0;
         this.capped = false;
-        this.timeRes=timeRes;
+        this.timeRes = timeRes;
         if (rand.nextBoolean()) {
             branch *= -1;
         }
         timeSinceDissociation = time;
+        addMonomer(xc, yc, time);
     }
 
     final void addMonomer(double x, double y, int time) {
